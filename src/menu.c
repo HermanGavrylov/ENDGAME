@@ -26,14 +26,14 @@ int main() {
     // Initialization
     const int screenWidth = 800;
     const int screenHeight = 450;
-    InitWindow(screenWidth, screenHeight, "Raylib Menu System - Prototype");
+    InitWindow(screenWidth, screenHeight, "ENDGAME");
     
     GameState currentState = STATE_MENU;
     
     // Layout definitions
     Rectangle playBtn = { screenWidth/2 - 100, 160, 200, 50 };
-    Rectangle settingsBtn = { 300, 210, 200, 50 };
-    Rectangle exitBtn = { screenWidth/2 - 100, 260, 200, 50 };
+    Rectangle settingsBtn = { 300, 220, 200, 50 };
+    Rectangle exitBtn = { screenWidth/2 - 100, 280, 200, 50 };
 
     SetTargetFPS(60);
 
@@ -62,7 +62,13 @@ int main() {
 
                 case STATE_GAMEPLAY:
                     DrawRectangle(0, 0, screenWidth, screenHeight, DARKBLUE);
-                    DrawText("GAMEPLAY PLACEHOLDER", 230, 200, 30, RAYWHITE);
+                    DrawText("GAME", 230, 200, 30, RAYWHITE);
+                    DrawText("Press TAB to return to Menu", 10, 10, 20, LIGHTGRAY);
+                    break;
+
+                case STATE_SETTINGS:
+                    DrawRectangle(0, 0, screenWidth, screenHeight, DARKBLUE);
+                    DrawText("SETTINGS HERE", 230, 200, 30, RAYWHITE);
                     DrawText("Press TAB to return to Menu", 10, 10, 20, LIGHTGRAY);
                     break;
                 
