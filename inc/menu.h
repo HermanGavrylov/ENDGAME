@@ -1,8 +1,9 @@
 #ifndef MENU_H
 #define MENU_H
 
-#include <raylib.h>
+#include "raylib.h"
 
+// Define the states for the whole program
 typedef enum GameState { 
     STATE_MENU, 
     STATE_GAMEPLAY, 
@@ -10,6 +11,7 @@ typedef enum GameState {
     STATE_EXIT 
 } GameState;
 
-bool DrawButton(Rectangle rect, const char* text, Color baseColor, Color hoverColor);
+// The main entry point for your menu logic
+void DrawMainMenu(GameState *currentState);
 
 #endif
