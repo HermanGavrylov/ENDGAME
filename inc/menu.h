@@ -5,13 +5,14 @@
 
 // Define the states for the whole program
 typedef enum GameState { 
-    STATE_MENU, 
+    STATE_MENU,
+    STATE_PAUSE, 
     STATE_GAMEPLAY, 
     STATE_SETTINGS, 
     STATE_EXIT 
 } GameState;
 
-// The main entry point for your menu logic
 void DrawMainMenu(GameState *currentState);
+void DrawPauseMenu(GameState *currentState);
 
 #endif

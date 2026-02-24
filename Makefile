@@ -11,7 +11,7 @@ LDFLAGS = -L/opt/homebrew/lib -L/usr/local/lib
 LIBS = -lraylib -framework IOKit -framework Cocoa -framework OpenGL
 
 # Files
-SRC = src/menu.c src/main_menu.c
+SRC = src/menu.c src/main_menu.c src/pause_menu.c
 TARGET = menu_test
 
 $(TARGET): $(SRC)

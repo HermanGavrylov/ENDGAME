@@ -24,12 +24,19 @@ int main() {
                 case STATE_SETTINGS:
                     DrawText("SETTINGS SCREEN", 280, 200, 20, GRAY);
                     DrawText("Press TAB to go back", 10, 10, 20, DARKGRAY);
-                    if (IsKeyPressed(KEY_TAB)) currentState = STATE_MENU;
+                    if (IsKeyPressed(KEY_TAB)){
+                         currentState = STATE_MENU;
+                        }
                     break;
                 // Calling gameolay
                 case STATE_GAMEPLAY:
                     DrawText("Press TAB to open menu", 10, 10, 20, DARKGRAY);
-                    if (IsKeyPressed(KEY_TAB)) currentState = STATE_MENU;
+                    if (IsKeyPressed(KEY_TAB)){
+                         currentState = STATE_PAUSE;
+                        }
+                    break;
+                case STATE_PAUSE:
+                    DrawPauseMenu(&currentState);
                     break;
                 
                 default: break;
