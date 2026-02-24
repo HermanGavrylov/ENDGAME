@@ -13,6 +13,6 @@ typedef enum GameState {
 } GameState;
 
 void DrawMainMenu(GameState *currentState);
-void DrawPauseMenu(GameState *currentState);
+void DrawPauseMenu(bool *isPaused, GameState *currentState);
 
 #endif
