@@ -18,6 +18,8 @@ int main(void) {
     InitWindow(SCREEN_W, SCREEN_H, "Terraria Clone");
     SetTargetFPS(TARGET_FPS);
 
+    IntroRun();
+
     TexturesLoad();
 
     GameState gs = {0};
@@ -65,6 +67,7 @@ int main(void) {
             InvDraw(&gs.inv);
             PlayerDrawHUD(&gs.player);
             DayNightDrawClock(&gs.daynight);
+            DrawFPS(SCREEN_W - 80, SCREEN_H - 24);
         EndDrawing();
     }
 

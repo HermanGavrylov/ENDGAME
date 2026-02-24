@@ -22,20 +22,19 @@ void LightingDraw(const World *w, const Camera2D *cam,
     if (alpha <= 0.01f) return;
 
     unsigned char darkA = (unsigned char)(alpha * 255.0f);
-
     DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){ 0, 0, 20, darkA });
 
     BeginBlendMode(BLEND_ADDITIVE);
 
     bool holdingTorch = (inv->hotbar[inv->activeSlot].type == TILE_TORCH);
 
+    Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
+
     if (holdingTorch) {
-        Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
-        Color torchHand = { 255, 200, 80, (unsigned char)(alpha * 230.0f) };
+        Color torchHand = { 200, 150, 60, (unsigned char)(alpha * 110.0f) };
         DrawLight(pCenter, TORCH_LIGHT_R, torchHand, cam);
     } else {
-        Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
-        Color ambient   = { 180, 140, 80, (unsigned char)(alpha * 90.0f) };
+        Color ambient = { 160, 120, 60, (unsigned char)(alpha * 45.0f) };
         DrawLight(pCenter, PLAYER_LIGHT_R, ambient, cam);
     }
 
@@ -50,7 +49,7 @@ void LightingDraw(const World *w, const Camera2D *cam,
     if (endX > WORLD_W) endX = WORLD_W;
     if (endY > WORLD_H) endY = WORLD_H;
 
-    Color torchCol = { 255, 200, 80, (unsigned char)(alpha * 220.0f) };
+    Color torchCol = { 200, 150, 55, (unsigned char)(alpha * 100.0f) };
 
     for (int ty = startY; ty < endY; ty++) {
         for (int tx = startX; tx < endX; tx++) {

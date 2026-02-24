@@ -42,6 +42,8 @@ void  DayNightDrawClock(const DayNight *dn);
 void  LightingDraw(const World *w, const Camera2D *cam,
                    const Player *p, const Inventory *inv, const DayNight *dn);
 
+void  IntroRun(void);
+
 void  CameraUpdate(Camera2D *cam, const Player *p);
 
 #endif
