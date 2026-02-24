@@ -75,6 +75,9 @@
 #define MONSTER_DAMAGE   10
 #define MONSTER_SIGHT    200.0f
 #define MONSTER_IFRAMES  0.5f
+#define MONSTER_BREAK_TIME     2.2f
+#define MONSTER_DIG_RANGE      320.0f
+#define MONSTER_BREAK_COOLDOWN 0.3f
 
 typedef enum {
     TILE_AIR    = 0,
@@ -115,6 +118,14 @@ typedef struct {
     float   iframes;
     bool    alive;
     bool    facingLeft;
+    float   breakTimer;
+    float   breakCooldown;
+    int     breakTX;
+    int     breakTY;
+    Vector2 path[32];
+    int     pathLen;
+    int     pathStep;
+    float   retargetTimer;
 } Monster;
 
 typedef struct {

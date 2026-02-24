@@ -72,6 +72,11 @@ int main(void) {
     }
 
     TexturesUnload();
-    CloseWindow();
-    return 0;
+
+if (gs.daynight.finished && gs.player.hp > 0) {    
+    OutroRun();
+}
+
+CloseWindow();
+return 0;
 }
