@@ -2,18 +2,15 @@
 #include "menu.h"
 #include <stdio.h>
 
-// Saves the settings struct to a binary file
 void SaveSettings(GameSettings settings) {
-    // Raylib helper to save data to a file
     SaveFileData("config.bin", &settings, sizeof(GameSettings));
 }
 
-// Loads settings from file or provides defaults if file doesn't exist
 GameSettings LoadSettings(void) {
     GameSettings settings = { 0.5f }; // Default to 50% volume
     
     if (FileExists("config.bin")) {
-        int bytesRead = 0; // Changed to int to fix compiler warning
+        int bytesRead = 0;
         unsigned char *data = LoadFileData("config.bin", &bytesRead);
         
         if (data != NULL && bytesRead == sizeof(GameSettings)) {
@@ -22,7 +19,6 @@ GameSettings LoadSettings(void) {
         }
     }
     
-    // Apply the loaded volume to the audio device immediately
     SetMasterVolume(settings.volume);
     return settings;
 }
@@ -33,28 +29,23 @@ void DrawSettingsScreen(GameSettings *settings, int *currentState, int previousS
     // Slider dimensions and position
     Rectangle volumeBar = { 200, 200, 400, 30 };
     
-    // --- 1. KEYBOARD CONTROLS ---
+    // KEYBOARD CONTROLS
     // Change volume by 1% per frame if key is held
     if (IsKeyDown(KEY_RIGHT)) settings->volume += 0.01f;
     if (IsKeyDown(KEY_LEFT)) settings->volume -= 0.01f;
 
-    // --- 2. MOUSE DRAGGING LOGIC ---
+    // MOUSE DRAGGING LOGIC
     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
         if (CheckCollisionPointRec(mousePos, volumeBar)) {
-            // Calculate new volume based on mouse X position relative to bar
             settings->volume = (mousePos.x - volumeBar.x) / volumeBar.width;
         }
     }
 
-    // --- 3. CONSTRAINTS & REAL-TIME UPDATE ---
-    // Keep volume between 0.0 and 1.0
     if (settings->volume < 0.0f) settings->volume = 0.0f;
     if (settings->volume > 1.0f) settings->volume = 1.0f;
     
-    // Update master volume every frame for instant feedback
     SetMasterVolume(settings->volume);
 
-    // --- 4. DRAWING ---
     ClearBackground(RAYWHITE);
     
     DrawText("SETTINGS", 300, 80, 40, DARKGRAY);
@@ -82,13 +73,10 @@ void DrawSettingsScreen(GameSettings *settings, int *currentState, int previousS
     DrawText("[S] SAVE SETTINGS", 200, 350, 20, DARKGREEN);
     DrawText("[ESC] BACK", 450, 350, 20, MAROON);
 
-    // --- 5. INPUT HANDLING ---
-    // Save to file
     if (IsKeyPressed(KEY_S)) {
         SaveSettings(*settings);
     }
 
-    // Go back to previous menu
     if (IsKeyPressed(KEY_ESCAPE)) {
         *currentState = previousState;
     }
