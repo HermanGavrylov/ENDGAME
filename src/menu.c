@@ -1,12 +1,19 @@
 #include "raylib.h"
 #include "menu.h"
+#include "settings.h"
 
 int main() {
     const int screenWidth = 800;
     const int screenHeight = 450;
     InitWindow(screenWidth, screenHeight, "Raylib Modular Menu System");
     SetExitKey(KEY_NULL); // SO ESC will no longer close the window and I can use it for menu
+    
+    // Adding music
+    
     InitAudioDevice(); // Init music
+
+    Music backgroundMusic = LoadMusicStream("resources/sound/story_background.mp3");
+    PlayMusicStream(backgroundMusic);
 
     GameState currentState = STATE_MENU;
     GameState previousState = STATE_MENU; // Tracks where we came from
@@ -14,9 +21,13 @@ int main() {
     
     SetTargetFPS(60);
 
+    GameSettings settings = LoadSettings();
+
     // Main Game Loop
     while (currentState != STATE_EXIT && !WindowShouldClose()) {
         
+        UpdateMusicStream(backgroundMusic);
+
         // --- DRAWING ---
         BeginDrawing();
         ClearBackground(RAYWHITE);
@@ -38,10 +49,7 @@ int main() {
                     break;
 
                 case STATE_SETTINGS:
-                    DrawText("SETTINGS SCREEN", 280, 150, 30, DARKGRAY);
-                    DrawText("Volume: [ ||||||||-- ]", 280, 220, 20, GRAY);
-                    DrawText("Press ESC to go back", 10, 10, 20, LIGHTGRAY);
-                    
+                    DrawSettingsScreen(&settings, &currentState, previousState);
                     // Go back to whichever screen we were on before
                     if (IsKeyPressed(KEY_ESCAPE)) {
                         currentState = previousState;
@@ -75,6 +83,8 @@ int main() {
 
         EndDrawing();
     }
+    UnloadMusicStream(backgroundMusic);
+    CloseAudioDevice();
     CloseWindow();
 
     return 0;
