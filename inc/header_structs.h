@@ -48,6 +48,11 @@
 #define PLAYER_MAX_HP    100
 #define PLAYER_IFRAMES   1.2f
 
+#define SWORD_DAMAGE     20
+#define SWORD_REACH      28.0f
+#define SWORD_ARC        0.25f
+#define SWORD_COOLDOWN   0.45f
+
 #define MINE_REACH       5
 #define MINE_COOLDOWN    0.25f
 
@@ -60,6 +65,7 @@
 #define INV_COLS         9
 #define INV_SIZE         (INV_ROWS * INV_COLS)
 #define STACK_MAX        999
+#define DRAG_NONE        -1
 
 #define DAY_DURATION     150.0f
 #define NIGHT_DURATION   150.0f
@@ -79,6 +85,8 @@
 #define MONSTER_DIG_RANGE      320.0f
 #define MONSTER_BREAK_COOLDOWN 0.3f
 
+#define QUEST_COUNT      5
+
 typedef enum {
     TILE_AIR    = 0,
     TILE_GRASS,
@@ -91,6 +99,7 @@ typedef enum {
     TILE_LEAVES,
     TILE_WATER,
     TILE_TORCH,
+    TILE_SWORD,
     TILE_COUNT
 } TileType;
 
@@ -109,6 +118,8 @@ typedef struct {
     bool    facingLeft;
     int     hp;
     float   iframes;
+    float   swordTimer;
+    bool    attacking;
 } Player;
 
 typedef struct {
@@ -126,6 +137,7 @@ typedef struct {
     int     pathLen;
     int     pathStep;
     float   retargetTimer;
+    float   jumpCooldown;
 } Monster;
 
 typedef struct {
@@ -143,6 +155,9 @@ typedef struct {
     ItemStack bag[INV_SIZE];
     int       activeSlot;
     bool      open;
+    int       dragSlot;
+    bool      dragFromHotbar;
+    ItemStack dragItem;
 } Inventory;
 
 typedef struct {
@@ -159,6 +174,20 @@ typedef struct {
 } DayNight;
 
 typedef struct {
+    const char *title;
+    const char *desc;
+    bool        done;
+} Quest;
+
+typedef struct {
+    Quest quests[QUEST_COUNT];
+    float progress[QUEST_COUNT];
+    int   count;
+    bool  show;
+    float fadeAlpha;
+} QuestLog;
+
+typedef struct {
     World      world;
     Player     player;
     Camera2D   camera;
@@ -166,6 +195,7 @@ typedef struct {
     Inventory  inv;
     DayNight   daynight;
     Monsters   monsters;
+    QuestLog   quests;
 } GameState;
 
 static inline Color TileColor(TileType t) {
@@ -180,6 +210,7 @@ static inline Color TileColor(TileType t) {
         case TILE_LEAVES: return (Color){  34, 139,  34, 255 };
         case TILE_WATER:  return (Color){  64, 164, 223, 180 };
         case TILE_TORCH:  return (Color){ 255, 200,  60, 255 };
+        case TILE_SWORD:  return (Color){ 200, 210, 230, 255 };
         default:          return (Color){   0,   0,   0,   0 };
     }
 }
@@ -196,6 +227,7 @@ static inline const char *TileName(TileType t) {
         case TILE_LEAVES: return "Leaves";
         case TILE_WATER:  return "Water";
         case TILE_TORCH:  return "Torch";
+        case TILE_SWORD:  return "Sword";
         default:          return "Air";
     }
 }

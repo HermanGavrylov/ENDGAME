@@ -1,10 +1,11 @@
 #include "header.h"
 
-#define PATH_LEN         32
-#define BFS_MAX          4096
-#define BFS_W            80
-#define BFS_H            60
-#define PATH_RETARGET    1.2f
+#define PATH_LEN            32
+#define BFS_MAX             4096
+#define BFS_W               80
+#define BFS_H               60
+#define PATH_RETARGET       1.2f
+#define JUMP_COOLDOWN_TIME  1.0f
 
 void MonstersInit(Monsters *ms) {
     memset(ms, 0, sizeof(Monsters));
@@ -27,6 +28,7 @@ static void SpawnMonster(Monsters *ms, Vector2 pos) {
     m->pathLen       = 0;
     m->pathStep      = 0;
     m->retargetTimer = 0.0f;
+    m->jumpCooldown  = 0.0f;
 }
 
 void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const DayNight *dn) {
@@ -131,9 +133,9 @@ static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int
     int ox = ptx - BFS_W / 2;
     int oy = pty - BFS_H / 2;
 
-    static signed char  prevX[BFS_H][BFS_W];
-    static signed char  prevY[BFS_H][BFS_W];
-    static bool         visited[BFS_H][BFS_W];
+    static signed char prevX[BFS_H][BFS_W];
+    static signed char prevY[BFS_H][BFS_W];
+    static bool        visited[BFS_H][BFS_W];
     memset(visited, 0, sizeof(visited));
 
     BFSNode queue[BFS_MAX];
@@ -157,7 +159,7 @@ static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int
         if (cur.x == ex && cur.y == ey) { found = true; break; }
 
         int dx[] = { -1, 1, 0, 0, -1, 1, -1, 1 };
-        int dy[] = {  0, 0,-1, 1, -1,-1,  1,  1 };
+        int dy[] = {  0, 0, -1, 1, -1, -1, 1, 1 };
 
         for (int d = 0; d < 8; d++) {
             int nx = cur.x + dx[d];
@@ -203,31 +205,81 @@ static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int
     m->pathStep = 0;
 }
 
-static bool WallAhead(const World *w, const Monster *m, bool goingLeft, int *outTX, int *outTY) {
+static int WallProfileFromGround(const World *w, const Monster *m,
+                                  bool goingLeft, int groundTY,
+                                  int *outTX, int *outTY) {
     int checkX = goingLeft
-        ? (int)floorf((m->pos.x - 2.0f) / TILE_SIZE)
+        ? (int)floorf((m->pos.x - 2.0f)             / TILE_SIZE)
         : (int)floorf((m->pos.x + MONSTER_W + 1.0f) / TILE_SIZE);
 
-    if (checkX < 0 || checkX >= WORLD_W) return false;
+    if (checkX < 0 || checkX >= WORLD_W) return 0;
 
-    int tyFeet = (int)floorf((m->pos.y + MONSTER_H - 2.0f) / TILE_SIZE);
-    int tyMid  = (int)floorf((m->pos.y + MONSTER_H * 0.5f) / TILE_SIZE);
+    int tyFeet = groundTY - 1;
+    int tyHead = groundTY - 2;
 
-    for (int ty = tyMid; ty <= tyFeet; ty++) {
+    int solidCount = 0;
+    int lowestSolid = -1;
+
+    for (int ty = tyHead; ty <= tyFeet; ty++) {
         if (ty < 0 || ty >= WORLD_H) continue;
         if (WorldIsSolid(w, checkX, ty)) {
-            *outTX = checkX;
-            *outTY = ty;
-            return true;
+            solidCount++;
+            lowestSolid = ty;
         }
     }
-    return false;
+
+    if (solidCount > 0) {
+        *outTX = checkX;
+        *outTY = lowestSolid;
+    }
+    return solidCount;
 }
 
-static bool WallTooTall(const World *w, int wallTX, int wallTY) {
-    int above = wallTY - 1;
-    if (above < 0) return false;
-    return WorldIsSolid(w, wallTX, above);
+static bool CanJumpOver(const World *w, int wallTX, int wallTY, int solidCount) {
+    if (solidCount != 1) return false;
+    return BFSWalkable(w, wallTX, wallTY - 1) &&
+           BFSWalkable(w, wallTX, wallTY - 2);
+}
+
+static void TryDigDown(Monster *m, World *w,
+                       const Vector2 pCenter, float dt) {
+    float myBottom = m->pos.y + MONSTER_H;
+    float pBottom  = pCenter.y + PLAYER_H * 0.5f;
+
+    if (pBottom <= myBottom) return;
+
+    int digTX0 = (int)floorf((m->pos.x + 2.0f)             / TILE_SIZE);
+    int digTX1 = (int)floorf((m->pos.x + MONSTER_W - 2.0f) / TILE_SIZE);
+    int digTY  = (int)floorf((myBottom + 1.0f)              / TILE_SIZE);
+
+    if (digTY < 0 || digTY >= WORLD_H) return;
+
+    for (int tx = digTX0; tx <= digTX1; tx++) {
+        if (!WorldInBounds(tx, digTY)) continue;
+        if (!TileBreakable(w->tiles[digTY][tx].type)) continue;
+
+        if (tx != m->breakTX || digTY != m->breakTY) {
+            m->breakTX    = tx;
+            m->breakTY    = digTY;
+            m->breakTimer = 0.0f;
+        }
+
+        if (m->breakCooldown <= 0.0f) {
+            m->breakTimer += dt;
+            if (m->breakTimer >= MONSTER_BREAK_TIME) {
+                w->tiles[digTY][tx].type = TILE_AIR;
+                int below = digTY + 1;
+                if (below < WORLD_H && TileBreakable(w->tiles[below][tx].type))
+                    w->tiles[below][tx].type = TILE_AIR;
+                m->breakTimer    = 0.0f;
+                m->breakCooldown = MONSTER_BREAK_COOLDOWN;
+                m->breakTX       = -1;
+                m->breakTY       = -1;
+                m->retargetTimer = PATH_RETARGET;
+            }
+        }
+        return;
+    }
 }
 
 void MonstersUpdate(Monsters *ms, Player *p, World *w, float dt) {
@@ -241,6 +293,7 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w, float dt) {
 
         if (m->iframes       > 0.0f) m->iframes       -= dt;
         if (m->breakCooldown > 0.0f) m->breakCooldown  -= dt;
+        if (m->jumpCooldown  > 0.0f) m->jumpCooldown   -= dt;
         m->retargetTimer += dt;
 
         Vector2 mCenter = { m->pos.x + MONSTER_W * 0.5f, m->pos.y + MONSTER_H * 0.5f };
@@ -250,12 +303,13 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w, float dt) {
         int mtx = (int)floorf(mCenter.x / TILE_SIZE);
         int mty = (int)floorf((m->pos.y + MONSTER_H - 1.0f) / TILE_SIZE);
         int ptx = (int)floorf(pCenter.x / TILE_SIZE);
-        int pty = (int)floorf((p->pos.y + PLAYER_H - 1.0f) / TILE_SIZE);
+        int pty = (int)floorf((p->pos.y + PLAYER_H - 1.0f)  / TILE_SIZE);
+
+        int by = (int)floorf((m->pos.y + MONSTER_H + 0.5f) / TILE_SIZE);
 
         bool onGround = false;
-        int bx0 = (int)floorf((m->pos.x + 1.0f) / TILE_SIZE);
+        int bx0 = (int)floorf((m->pos.x + 1.0f)             / TILE_SIZE);
         int bx1 = (int)floorf((m->pos.x + MONSTER_W - 1.0f) / TILE_SIZE);
-        int by  = (int)floorf((m->pos.y + MONSTER_H + 0.5f) / TILE_SIZE);
         for (int tx = bx0; tx <= bx1; tx++)
             if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
 
@@ -264,41 +318,49 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w, float dt) {
             BuildPath(w, m, mtx, mty, ptx, pty);
         }
 
-        bool hasPath    = m->pathLen > 0 && m->pathStep < m->pathLen;
-        bool digging    = false;
-        float moveX     = 0.0f;
-        bool  goLeft    = dx < 0;
+        bool  hasPath = m->pathLen > 0 && m->pathStep < m->pathLen;
+        bool  digging = false;
+        float moveX   = 0.0f;
+        bool  goLeft  = dx < 0;
 
         if (hasPath) {
             Vector2 target = m->path[m->pathStep];
             float   tdx    = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
             float   tdy    = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
-            float   tdist  = fabsf(tdx) + fabsf(tdy);
 
-            if (tdist < TILE_SIZE * 0.8f) {
+            if (fabsf(tdx) + fabsf(tdy) < TILE_SIZE * 0.8f) {
                 m->pathStep++;
                 hasPath = m->pathStep < m->pathLen;
             }
 
             if (hasPath) {
-                target  = m->path[m->pathStep];
-                tdx     = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
-                tdy     = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
-                goLeft  = tdx < 0;
-                moveX   = goLeft ? -MONSTER_SPEED : MONSTER_SPEED;
+                target = m->path[m->pathStep];
+                tdx    = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
+                tdy    = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
+                goLeft = tdx < 0;
+                moveX  = goLeft ? -MONSTER_SPEED : MONSTER_SPEED;
 
-                if (tdy < -TILE_SIZE * 0.5f && onGround && m->vel.y == 0.0f)
-                    m->vel.y = JUMP_FORCE * 0.85f;
+                if (tdy < -TILE_SIZE * 0.5f && onGround && m->vel.y == 0.0f &&
+                    m->jumpCooldown <= 0.0f) {
+                    m->vel.y        = JUMP_FORCE * 0.85f;
+                    m->jumpCooldown = JUMP_COOLDOWN_TIME;
+                }
             }
         } else {
             moveX = goLeft ? -MONSTER_SPEED : MONSTER_SPEED;
         }
 
         int wallTX = -1, wallTY = -1;
-        if (WallAhead(w, m, goLeft, &wallTX, &wallTY)) {
-            if (!WallTooTall(w, wallTX, wallTY)) {
-                if (onGround && m->vel.y == 0.0f)
-                    m->vel.y = JUMP_FORCE * 0.85f;
+        int solidCount = onGround
+            ? WallProfileFromGround(w, m, goLeft, by, &wallTX, &wallTY)
+            : 0;   
+
+        if (solidCount > 0) {
+            if (CanJumpOver(w, wallTX, wallTY, solidCount)) {
+                if (onGround && m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
+                    m->vel.y        = JUMP_FORCE * 0.85f;
+                    m->jumpCooldown = JUMP_COOLDOWN_TIME;
+                }
             } else if (dist < MONSTER_DIG_RANGE) {
                 digging = true;
 
@@ -329,16 +391,15 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w, float dt) {
             }
         }
 
+        if (onGround && dist < MONSTER_DIG_RANGE)
+            TryDigDown(m, w, pCenter, dt);
+
         if (!digging) {
             m->vel.x      = moveX;
             m->facingLeft = goLeft;
         } else {
             m->vel.x = 0;
         }
-
-        if (onGround && fabsf(dx) < MONSTER_SIGHT * 0.5f
-            && pCenter.y < mCenter.y && m->vel.y == 0.0f)
-            m->vel.y = JUMP_FORCE * 0.8f;
 
         m->vel.y += GRAVITY * dt;
         if (m->vel.y > MAX_FALL_SPEED) m->vel.y = MAX_FALL_SPEED;

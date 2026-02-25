@@ -135,11 +135,12 @@ static void PlaceLake(World *w, int cx, int surfY) {
 }
 
 static void GenerateTrees(World *w, const int *surface) {
-    int x = 3 + rand() % TREE_MIN_GAP;
-    while (x < WORLD_W - 3) {
-        if (surface[x] > 2 && surface[x] < WORLD_H - 2 && w->tiles[surface[x]][x].type != TILE_WATER)
+    int x = 6 + rand() % 10;
+    while (x < WORLD_W - 6) {
+        if (surface[x] > 2 && surface[x] < WORLD_H - 2 &&
+            w->tiles[surface[x]][x].type != TILE_WATER)
             PlaceTree(w, x, surface[x]);
-        x += TREE_MIN_GAP + rand() % (TREE_MIN_GAP + 2);
+        x += 10 + rand() % 14;
     }
 }
 

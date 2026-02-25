@@ -14,6 +14,8 @@ void  PlayerInit(Player *p, const World *w);
 void  PlayerUpdate(Player *p, const World *w, float dt);
 void  PlayerDraw(const Player *p);
 void  PlayerDrawHUD(const Player *p);
+bool  PlayerHasSwordActive(const Inventory *inv);
+void  PlayerAttack(Player *p, Monsters *ms, const Inventory *inv, float dt);
 void  MonstersInit(Monsters *ms);
 void  MonstersUpdate(Monsters *ms, Player *p, World *w, float dt);
 void  MonstersDraw(const Monsters *ms);
@@ -21,17 +23,22 @@ void  MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const Da
 void  InvInit(Inventory *inv);
 bool  InvAddItem(Inventory *inv, TileType type);
 bool  InvConsumeActive(Inventory *inv);
+void  InvHandleDrag(Inventory *inv);
 void  InvDraw(const Inventory *inv);
 void  InputInit(InputState *inp);
 void  InputUpdate(InputState *inp, World *w, const Player *p,
-const Camera2D *cam, Inventory *inv, float dt);
+                  const Camera2D *cam, Inventory *inv, float dt);
 void  InputDrawCursor(const InputState *inp);
 void  DayNightInit(DayNight *dn);
 void  DayNightUpdate(DayNight *dn, float dt);
 Color DayNightSkyColor(const DayNight *dn);
 void  DayNightDrawClock(const DayNight *dn);
 void  LightingDraw(const World *w, const Camera2D *cam,
-const Player *p, const Inventory *inv, const DayNight *dn);
+                   const Player *p, const Inventory *inv, const DayNight *dn);
+void  QuestInit(QuestLog *ql);
+void  QuestUpdate(QuestLog *ql, const Player *p, const Inventory *inv,
+                  const World *w, float dt);
+void  QuestDraw(const QuestLog *ql);
 void  IntroRun(void);
 void  OutroRun(void);
 void  CameraUpdate(Camera2D *cam, const Player *p);

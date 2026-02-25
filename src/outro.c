@@ -23,7 +23,6 @@ static const int OUTRO_BOLD[OUTRO_LINES] = {
     0, 0, 0, 0, 0, 1,
 };
 
-/* Reuse helpers — identical signatures to intro versions */
 static void OutroDrawCenteredWrapped(const char *text, int fontSize, Color col) {
     int lineH = fontSize + 6;
     int total = 0;
