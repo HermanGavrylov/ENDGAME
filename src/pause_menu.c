@@ -50,11 +50,11 @@ void DrawPauseMenu(bool *isPaused, MenuSystemState *currentState) {
         *isPaused = false; 
     }
 
-    if (DrawButton((Rectangle){ btnX, py + 105, btnW, btnH }, "ADJUST GEAR", (Color){ 255, 220, 120, 255 })) {
+    if (DrawButton((Rectangle){ btnX, py + 105, btnW, btnH }, "SETTINGS", (Color){ 255, 220, 120, 255 })) {
         *currentState = STATE_SETTINGS;
     }   
 
-    if (DrawButton((Rectangle){ btnX, py + 165, btnW, btnH }, "ABANDON TO MENU", (Color){ 220, 80, 80, 255 })) {
+    if (DrawButton((Rectangle){ btnX, py + 165, btnW, btnH }, "BACK TO MENU", (Color){ 220, 80, 80, 255 })) {
         *isPaused = false;      
         *currentState = STATE_MENU; 
     }
