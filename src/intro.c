@@ -3,9 +3,7 @@
 #define INTRO_LINES      7
 #define CHAR_DELAY       0.032f
 #define LINE_HOLD        2.2f
-#define LINE_FADE_IN     0.4f
 #define LINE_FADE_OUT    0.5f
-#define FINAL_HOLD       3.0f
 #define SKIP_KEY         KEY_SPACE
 
 static const char *LINES[INTRO_LINES] = {
@@ -22,67 +20,58 @@ static const float LINE_SIZES[INTRO_LINES] = {
     18, 20, 28, 20, 24, 20, 30,
 };
 
-static const int LINE_BOLD[INTRO_LINES] = {
-    0, 0, 1, 0, 1, 0, 1,
-};
-
-static void DrawCenteredWrapped(const char *text, int fontSize, Color col) {
-    int lineH   = fontSize + 6;
-    int total   = 0;
-    const char *p = text;
-    while (*p) { if (*p == '\n') total++; p++; }
-    total++;
-
-    int startY = SCREEN_H / 2 - (total * lineH) / 2;
-    int line   = 0;
-    char buf[128];
-    int  bi = 0;
-
-    p = text;
-    while (1) {
-        if (*p == '\n' || *p == '\0') {
-            buf[bi] = '\0';
-            int tw = MeasureText(buf, fontSize);
-            DrawText(buf, (SCREEN_W - tw) / 2, startY + line * lineH, fontSize, col);
-            line++;
-            bi = 0;
-            if (*p == '\0') break;
-        } else {
-            if (bi < 126) buf[bi++] = *p;
-        }
-        p++;
-    }
-}
-
 static int CountChars(const char *s) {
     int n = 0;
     while (*s) { if (*s != '\n') n++; s++; }
     return n;
 }
 
-static void DrawTypewriter(const char *text, int fontSize, Color col, float t) {
-    int totalChars = CountChars(text);
-    int visible    = (int)(t / CHAR_DELAY);
-    if (visible > totalChars) visible = totalChars;
-
+static void DrawCenteredWrapped(const char *text, int fontSize, Color col) {
     int lineH   = fontSize + 6;
-    int total   = 0;
-    const char *p = text;
-    while (*p) { if (*p == '\n') total++; p++; }
-    total++;
+    int total   = 1;
+    for (const char *p = text; *p; p++)
+        if (*p == '\n') total++;
 
     int startY = SCREEN_H / 2 - (total * lineH) / 2;
     int line   = 0;
     char buf[128];
     int  bi = 0;
-    int  drawn = 0;
 
-    p = text;
-    while (1) {
+    for (const char *p = text;; p++) {
         if (*p == '\n' || *p == '\0') {
             buf[bi] = '\0';
             int tw = MeasureText(buf, fontSize);
-            DrawText(buf, (SCREEN_W - tw) / 2, startY + line * lineH, fontSize, col);
+            DrawText(buf, (SCREEN_W - tw) / 2,
+                     startY + line * lineH, fontSize, col);
+            line++;
+            bi = 0;
+            if (*p == '\0') break;
+        } else {
+            if (bi < 126) buf[bi++] = *p;
+        }
+    }
+}
+
+static void DrawTypewriter(const char *text, int fontSize, Color col, float t) {
+    int visible = (int)(t / CHAR_DELAY);
+    int drawn   = 0;
+
+    int lineH   = fontSize + 6;
+    int total   = 1;
+    for (const char *p = text; *p; p++)
+        if (*p == '\n') total++;
+
+    int startY = SCREEN_H / 2 - (total * lineH) / 2;
+    int line   = 0;
+    char buf[128];
+    int  bi = 0;
+
+    for (const char *p = text;; p++) {
+        if (*p == '\n' || *p == '\0') {
+            buf[bi] = '\0';
+            int tw = MeasureText(buf, fontSize);
+            DrawText(buf, (SCREEN_W - tw) / 2,
+                     startY + line * lineH, fontSize, col);
             line++;
             bi = 0;
             if (*p == '\0') break;
@@ -90,101 +79,75 @@ static void DrawTypewriter(const char *text, int fontSize, Color col, float t) {
             if (drawn < visible && bi < 126) {
                 buf[bi++] = *p;
                 drawn++;
-            } else if (drawn >= visible) {
-                buf[bi] = '\0';
-                int tw = MeasureText(buf, fontSize);
-                DrawText(buf, (SCREEN_W - tw) / 2, startY + line * lineH, fontSize, col);
-                line++;
-                bi = 0;
-                while (*p && *p != '\n') p++;
-                if (*p == '\n') { p++; continue; }
-                break;
             }
         }
-        p++;
     }
 }
 
 void IntroRun(void) {
-    float  t          = 0.0f;
-    int    lineIdx    = 0;
-    float  bgAlpha    = 0.0f;
-    bool   finalPause = false;
-    float  finalT     = 0.0f;
+    float  t       = 0.0f;
+    int    lineIdx = 0;
+    bool   finishedText = false;
 
     while (!WindowShouldClose()) {
+
         float dt = GetFrameTime();
-
-        if (IsKeyPressed(SKIP_KEY)) return;
-
-        if (finalPause) {
-            finalT += dt;
-            bgAlpha = 1.0f - (finalT / 1.2f);
-            if (bgAlpha < 0.0f) bgAlpha = 0.0f;
-            if (finalT >= FINAL_HOLD) return;
-
-            BeginDrawing();
-            ClearBackground(BLACK);
-            DrawRectangle(0, 0, SCREEN_W, SCREEN_H,
-                          (Color){ 0, 0, 0, (unsigned char)(bgAlpha * 255) });
-            EndDrawing();
-            continue;
-        }
-
         t += dt;
 
-        int    fs      = (int)LINE_SIZES[lineIdx];
-        bool   bold    = LINE_BOLD[lineIdx];
-        int    typeLen = CountChars(LINES[lineIdx]);
-        float  typeDur = typeLen * CHAR_DELAY;
-        float  hold    = typeDur + LINE_HOLD;
-        (void)bold;
-
-        float lineAlpha = 1.0f;
-        if (t > hold - LINE_FADE_OUT && t < hold)
-            lineAlpha = 1.0f - (t - (hold - LINE_FADE_OUT)) / LINE_FADE_OUT;
-        else if (t >= hold)
-            lineAlpha = 0.0f;
-
-        unsigned char ca = (unsigned char)(lineAlpha * 255.0f);
-        Color textCol    = { 220, 215, 205, ca };
-        Color dimCol     = { 140, 135, 125, (unsigned char)(lineAlpha * 160.0f) };
-
-        float bgTarget = (lineIdx == INTRO_LINES - 1) ? 0.0f : 0.85f;
-        bgAlpha += (bgTarget - bgAlpha) * dt * 2.0f;
+        int   fs      = (int)LINE_SIZES[lineIdx];
+        int   typeLen = CountChars(LINES[lineIdx]);
+        float typeDur = typeLen * CHAR_DELAY;
+        float hold    = typeDur + LINE_HOLD;
 
         BeginDrawing();
         ClearBackground(BLACK);
-        DrawRectangle(0, 0, SCREEN_W, SCREEN_H,
-                      (Color){ 0, 0, 0, (unsigned char)(bgAlpha * 255) });
 
         if (t < typeDur) {
-            DrawTypewriter(LINES[lineIdx], fs, textCol, t);
+            DrawTypewriter(LINES[lineIdx], fs,
+                           (Color){220,215,205,255}, t);
         } else {
-            DrawCenteredWrapped(LINES[lineIdx], fs, textCol);
+            DrawCenteredWrapped(LINES[lineIdx], fs,
+                                (Color){220,215,205,255});
         }
 
-        if (lineIdx == INTRO_LINES - 1) {
+        if (lineIdx == INTRO_LINES - 1 && t >= hold) {
+            finishedText = true;
+
             const char *hint = "Press SPACE to begin";
-            int hw = MeasureText(hint, 14);
-            unsigned char ha = (unsigned char)(fminf(1.0f, (t - typeDur) / 0.8f) *
-                                               (0.5f + 0.5f * sinf(t * 3.0f)) * 180.0f);
-            DrawText(hint, (SCREEN_W - hw) / 2, SCREEN_H * 3 / 4, 14, (Color){ 180, 170, 150, ha });
-            (void)dimCol;
+            int hw = MeasureText(hint, 16);
+            DrawText(hint,
+                     (SCREEN_W - hw) / 2,
+                     SCREEN_H * 3 / 4,
+                     16,
+                     (Color){180,170,150,
+                             (unsigned char)(120 + 60 * sinf(GetTime() * 3))});
         }
 
-        DrawText("SPACE — skip", 12, SCREEN_H - 24, 12, (Color){ 100, 100, 100, 160 });
+        DrawText("SPACE - skip",
+                 12, SCREEN_H - 24,
+                 12, (Color){100,100,100,160});
 
         EndDrawing();
 
-        if (t >= hold) {
+        if (IsKeyPressed(KEY_SPACE)) {
+
+            if (!finishedText) {
+                lineIdx++;
+                t = 0.0f;
+
+                if (lineIdx >= INTRO_LINES)
+                    lineIdx = INTRO_LINES - 1;
+            }
+            else {
+                return;
+            }
+        }
+
+        if (!finishedText && t >= hold) {
             t = 0.0f;
             lineIdx++;
-            if (lineIdx >= INTRO_LINES) {
-                finalPause = true;
-                finalT     = 0.0f;
-                bgAlpha    = 1.0f;
-            }
+            if (lineIdx >= INTRO_LINES)
+                lineIdx = INTRO_LINES - 1;
         }
     }
 }
