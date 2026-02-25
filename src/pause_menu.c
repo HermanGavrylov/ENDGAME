@@ -1,46 +1,65 @@
-#include "raylib.h"
+#include "header.h"
 #include "menu.h"
 
-// Private helper function: only visible inside this file
-static bool DrawButton(Rectangle rect, const char* text, Color baseColor, Color hoverColor) {
-    Vector2 mousePoint = GetMousePosition();
-    bool isHovering = CheckCollisionPointRec(mousePoint, rect);
+static bool DrawButton(Rectangle rect, const char* text, Color hoverTint) {
+    Vector2 mouse = GetMousePosition();
+    bool isHovering = CheckCollisionPointRec(mouse, rect);
     
-    if (isHovering) SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+    Color baseBg = { 30, 30, 40, 140 };
+    Color currBg = isHovering ? (Color){ 20, 60, 20, 160 } : baseBg;
+    Color borderColor = isHovering ? hoverTint : (Color){ 70, 65, 55, 255 };
 
-    DrawRectangleRec(rect, isHovering ? hoverColor : baseColor);
-    DrawRectangleLinesEx(rect, 2, DARKGRAY);
+    DrawRectangleRec(rect, currBg);
+    DrawRectangleLinesEx(rect, 1, borderColor);
 
-    int fontSize = 20;
+    int fontSize = 14;
     int textWidth = MeasureText(text, fontSize);
-    DrawText(text, rect.x + (rect.width/2 - textWidth/2), rect.y + (rect.height/2 - fontSize/2), fontSize, BLACK);
+    Color textColor = isHovering ? hoverTint : (Color){ 230, 220, 200, 255 };
+    
+    DrawText(text, rect.x + (rect.width/2 - textWidth/2), 
+                   rect.y + (rect.height/2 - fontSize/2), 
+                   fontSize, textColor);
 
+    if (isHovering) SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
     return (isHovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
 }
 
 void DrawPauseMenu(bool *isPaused, MenuSystemState *currentState) {
-    //Dim the background (50% transparency)
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
+    float sw = (float)GetScreenWidth();
+    float sh = (float)GetScreenHeight();
 
-    // Define all menu buttons
-    float centerX = GetScreenWidth() / 2.0f - 100;
-    Rectangle resumeBtn   = { centerX, 180, 200, 50 };
-    Rectangle settingsBtn = { centerX, 250, 200, 50 };
-    Rectangle menuBtn     = { centerX, 320, 200, 50 };
+    DrawRectangle(0, 0, (int)sw, (int)sh, (Color){ 0, 0, 0, 100 });
 
-    DrawText("PAUSED", GetScreenWidth()/2 - MeasureText("PAUSED", 30)/2, 100, 30, WHITE);
+    int panelW = 300;
+    int panelH = 240;
+    int px = (int)(sw/2 - panelW/2);
+    int py = (int)(sh/2 - panelH/2);
 
-    //Button Logic
-    if (DrawButton(resumeBtn, "CONTINUE", LIGHTGRAY, GREEN)) {
+    DrawRectangle(px, py, panelW, panelH, (Color){ 10, 10, 20, 200 });
+    DrawRectangleLines(px, py, panelW, panelH, (Color){ 100, 90, 70, 255 });
+
+    const char *title = "Survival Paused";
+    int tw = MeasureText(title, 16);
+    DrawText(title, sw/2 - tw/2, py + 8, 16, (Color){ 255, 220, 120, 255 });
+
+    int btnW = 260;
+    int btnH = 45;
+    int btnX = sw/2 - btnW/2;
+
+    if (DrawButton((Rectangle){ btnX, py + 45, btnW, btnH }, "RESUME", (Color){ 120, 220, 120, 255 })) {
         *isPaused = false; 
     }
 
-    if (DrawButton(settingsBtn, "SETTINGS", LIGHTGRAY, GOLD)) {
+    if (DrawButton((Rectangle){ btnX, py + 105, btnW, btnH }, "ADJUST GEAR", (Color){ 255, 220, 120, 255 })) {
         *currentState = STATE_SETTINGS;
     }   
 
-    if (DrawButton(menuBtn, "MAIN MENU", LIGHTGRAY, RED)) {
+    if (DrawButton((Rectangle){ btnX, py + 165, btnW, btnH }, "ABANDON TO MENU", (Color){ 220, 80, 80, 255 })) {
         *isPaused = false;      
         *currentState = STATE_MENU; 
     }
+
+    const char *hint = "ESC - resume";
+    int hw = MeasureText(hint, 11);
+    DrawText(hint, sw/2 - hw/2, py + panelH - 18, 11, (Color){ 120, 120, 120, 255 });
 }
