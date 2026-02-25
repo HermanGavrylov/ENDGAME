@@ -18,7 +18,7 @@ static bool DrawButton(Rectangle rect, const char* text, Color baseColor, Color 
     return (isHovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
 }
 
-void DrawPauseMenu(bool *isPaused, GameState *currentState) {
+void DrawPauseMenu(bool *isPaused, MenuSystemState *currentState) {
     //Dim the background (50% transparency)
     DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.5f));
 

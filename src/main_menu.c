@@ -18,7 +18,7 @@ static bool DrawButton(Rectangle rect, const char* text, Color baseColor, Color 
     return (isHovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON));
 }
 
-void DrawMainMenu(GameState *currentState) {
+void DrawMainMenu(MenuSystemState *currentState) {
     float screenW = GetScreenWidth();
     float screenH = GetScreenHeight();
     
