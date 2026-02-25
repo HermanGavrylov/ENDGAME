@@ -24,7 +24,7 @@ int main(void) {
     MenuSystemState currentState = STATE_MENU;
     MenuSystemState previousState = STATE_MENU;
     bool isPaused = false;
-    GameSettings settings = LoadSettings()
+    GameSettings settings = LoadSettings();
 
     TexturesLoad();
 
