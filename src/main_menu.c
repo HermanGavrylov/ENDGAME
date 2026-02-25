@@ -78,7 +78,7 @@ void DrawMainMenu(MenuSystemState *currentState) {
         *currentState = STATE_EXIT;
     }
 
-    const char *hint = "TAB - survival log";
+    const char *hint = "Press START SURVIVAL to start";
     int hw = MeasureText(hint, 11);
     DrawText(hint, sw/2 - hw/2, py + panelH - 18, 11, (Color){ 120, 120, 120, 255 });
 }

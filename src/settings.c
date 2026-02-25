@@ -92,7 +92,7 @@ void DrawSettingsScreen(GameSettings *settings, int *currentState, int previousS
     DrawText("[S] SAVE & BACK", px + 20, py + panelH - 45, 12, (Color){ 120, 220, 120, 255 });
     DrawText("[ESC] CANCEL", px + panelW - MeasureText("[ESC] CANCEL", 12) - 20, py + panelH - 45, 12, (Color){ 220, 80, 80, 255 });
 
-    const char *hint = "TAB - close";
+    const char *hint = "ESC - close";
     int hw = MeasureText(hint, 11);
     DrawText(hint, sw/2 - hw/2, py + panelH - 18, 11, (Color){ 120, 120, 120, 255 });
 
