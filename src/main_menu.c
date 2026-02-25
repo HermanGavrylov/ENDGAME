@@ -22,7 +22,7 @@ void DrawMainMenu(GameState *currentState) {
     float screenW = GetScreenWidth();
     float screenH = GetScreenHeight();
     
-    // Position buttons relative to screen center
+    // Define all menu buttons
     Rectangle playBtn = { screenW/2 - 100, screenH/2 - 60, 200, 50 };
     Rectangle settingsBtn = { screenW/2 - 100, screenH/2 + 10, 200, 50 };
     Rectangle exitBtn = { screenW/2 - 100, screenH/2 + 80, 200, 50 };

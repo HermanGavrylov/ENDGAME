@@ -2,24 +2,24 @@
 #include "menu.h"
 
 int main() {
-    // 1. Initialization
     const int screenWidth = 800;
     const int screenHeight = 450;
     InitWindow(screenWidth, screenHeight, "Raylib Modular Menu System");
+    SetExitKey(KEY_NULL); // SO ESC will no longer close the window and I can use it for menu
+    InitAudioDevice(); // Init music
 
-    // 2. State Variables
     GameState currentState = STATE_MENU;
     GameState previousState = STATE_MENU; // Tracks where we came from
     bool isPaused = false;                // Tracks if the pause overlay is active
     
     SetTargetFPS(60);
 
-    // 3. Main Game Loop
+    // Main Game Loop
     while (currentState != STATE_EXIT && !WindowShouldClose()) {
         
         // --- DRAWING ---
         BeginDrawing();
-            ClearBackground(RAYWHITE);
+        ClearBackground(RAYWHITE);
 
             switch(currentState) {
                 
@@ -40,26 +40,26 @@ int main() {
                 case STATE_SETTINGS:
                     DrawText("SETTINGS SCREEN", 280, 150, 30, DARKGRAY);
                     DrawText("Volume: [ ||||||||-- ]", 280, 220, 20, GRAY);
-                    DrawText("Press TAB to go back", 10, 10, 20, LIGHTGRAY);
+                    DrawText("Press ESC to go back", 10, 10, 20, LIGHTGRAY);
                     
                     // Go back to whichever screen we were on before
-                    if (IsKeyPressed(KEY_TAB)) {
+                    if (IsKeyPressed(KEY_ESCAPE)) {
                         currentState = previousState;
                     }
                     break;
 
                 case STATE_GAMEPLAY:
-                    // --- 1. Draw the Game World (stays visible behind pause) ---
+                    //Draw the Game World (stays visible behind pause)
                     DrawCircle(screenWidth/2, screenHeight/2, 60, MAROON);
                     DrawText("GAME WORLD ACTIVE", 10, 40, 20, DARKGRAY);
-                    DrawText("Press TAB to pause", 10, 10, 20, GRAY);
+                    DrawText("Press ESC to pause", 10, 10, 20, GRAY);
 
-                    // --- 2. Input Handling ---
-                    if (IsKeyPressed(KEY_TAB)) {
+                    //Input Handling
+                    if (IsKeyPressed(KEY_ESCAPE)) {
                         isPaused = !isPaused;
                     }
 
-                    // --- 3. Conditional Pause Menu ---
+                    //Conditional Pause Menu
                     if (isPaused) {
                         DrawPauseMenu(&isPaused, &currentState);
                         
@@ -75,8 +75,6 @@ int main() {
 
         EndDrawing();
     }
-
-    // 4. Cleanup
     CloseWindow();
 
     return 0;
