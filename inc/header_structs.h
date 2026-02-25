@@ -73,17 +73,35 @@
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
 
-#define MAX_MONSTERS     64
+#define MAX_MONSTERS          64
+#define MONSTER_IFRAMES       0.5f
+#define MONSTER_BREAK_TIME    2.2f
+#define MONSTER_DIG_RANGE     320.0f
+#define MONSTER_BREAK_COOLDOWN 0.3f
+
 #define MONSTER_W        14
 #define MONSTER_H        20
 #define MONSTER_SPEED    55.0f
 #define MONSTER_HP       30
 #define MONSTER_DAMAGE   10
 #define MONSTER_SIGHT    200.0f
-#define MONSTER_IFRAMES  0.5f
-#define MONSTER_BREAK_TIME     2.2f
-#define MONSTER_DIG_RANGE      320.0f
-#define MONSTER_BREAK_COOLDOWN 0.3f
+
+#define SPIDER_W         12
+#define SPIDER_H         10
+#define SPIDER_SPEED     80.0f
+#define SPIDER_HP        15
+#define SPIDER_DAMAGE    8
+#define SPIDER_SIGHT     240.0f
+
+#define GIANT_W          22
+#define GIANT_H          32
+#define GIANT_SPEED      30.0f
+#define GIANT_HP         90
+#define GIANT_DAMAGE     25
+#define GIANT_SIGHT      180.0f
+#define GIANT_BREAK_TIME 1.2f
+
+#define MAX_PARTICLES    256
 
 #define QUEST_COUNT      5
 
@@ -103,9 +121,19 @@ typedef enum {
     TILE_COUNT
 } TileType;
 
-typedef struct {
-    TileType type;
-} Tile;
+typedef enum {
+    MONSTER_TYPE_ZOMBIE = 0,
+    MONSTER_TYPE_SPIDER,
+    MONSTER_TYPE_GIANT,
+} MonsterType;
+
+typedef enum {
+    PARTICLE_BLOOD = 0,
+    PARTICLE_DUST,
+    PARTICLE_SPARK,
+} ParticleType;
+
+typedef struct { TileType type; } Tile;
 
 typedef struct {
     Tile tiles[WORLD_H][WORLD_W];
@@ -120,30 +148,51 @@ typedef struct {
     float   iframes;
     float   swordTimer;
     bool    attacking;
+    int     kills;
 } Player;
 
 typedef struct {
-    Vector2 pos;
-    Vector2 vel;
-    int     hp;
-    float   iframes;
-    bool    alive;
-    bool    facingLeft;
-    float   breakTimer;
-    float   breakCooldown;
-    int     breakTX;
-    int     breakTY;
-    Vector2 path[32];
-    int     pathLen;
-    int     pathStep;
-    float   retargetTimer;
-    float   jumpCooldown;
+    Vector2     pos;
+    Vector2     vel;
+    int         hp;
+    int         maxHp;
+    float       iframes;
+    bool        alive;
+    bool        facingLeft;
+    MonsterType kind;
+    float       breakTimer;
+    float       breakCooldown;
+    int         breakTX;
+    int         breakTY;
+    Vector2     path[32];
+    int         pathLen;
+    int         pathStep;
+    float       retargetTimer;
+    float       jumpCooldown;
+    /* spider wall-climb */
+    bool        onWall;
+    float       climbDir;   /* +1 down, -1 up */
 } Monster;
 
 typedef struct {
     Monster list[MAX_MONSTERS];
     int     count;
 } Monsters;
+
+typedef struct {
+    Vector2       pos;
+    Vector2       vel;
+    float         life;
+    float         maxLife;
+    Color         color;
+    float         size;
+    ParticleType  kind;
+} Particle;
+
+typedef struct {
+    Particle list[MAX_PARTICLES];
+    int      count;
+} Particles;
 
 typedef struct {
     TileType type;
@@ -195,6 +244,7 @@ typedef struct {
     Inventory  inv;
     DayNight   daynight;
     Monsters   monsters;
+    Particles  particles;
     QuestLog   quests;
 } GameState;
 

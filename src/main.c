@@ -27,6 +27,7 @@ int main(void) {
     gs.inv.hotbar[1].count = 1;
     DayNightInit(&gs.daynight);
     MonstersInit(&gs.monsters);
+    ParticlesInit(&gs.particles);
     QuestInit(&gs.quests);
 
     gs.camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
@@ -38,7 +39,7 @@ int main(void) {
         float dt    = GetFrameTime();
         float wheel = GetMouseWheelMove();
 
-        if (wheel != 0.0f && gs.inv.open) {
+        if (wheel != 0.0f && !gs.inv.open) {
             gs.camera.zoom += wheel * 0.15f;
             if (gs.camera.zoom < 0.5f) gs.camera.zoom = 0.5f;
             if (gs.camera.zoom > 5.0f) gs.camera.zoom = 5.0f;
@@ -46,13 +47,14 @@ int main(void) {
 
         DayNightUpdate(&gs.daynight, dt);
         MonstersSpawnNight(&gs.monsters, &gs.player, &gs.world, &gs.daynight);
-        MonstersUpdate(&gs.monsters, &gs.player, &gs.world, dt);
+        MonstersUpdate(&gs.monsters, &gs.player, &gs.world, &gs.particles, dt);
         InputUpdate(&gs.input, &gs.world, &gs.player, &gs.camera, &gs.inv, dt);
         PlayerUpdate(&gs.player, &gs.world, dt);
-        PlayerAttack(&gs.player, &gs.monsters, &gs.inv, dt);
-        CameraUpdate(&gs.camera, &gs.player);
+        PlayerAttack(&gs.player, &gs.monsters, &gs.particles, &gs.inv, dt);
+        ParticlesUpdate(&gs.particles, dt);
         InvHandleDrag(&gs.inv);
         QuestUpdate(&gs.quests, &gs.player, &gs.inv, &gs.world, dt);
+        CameraUpdate(&gs.camera, &gs.player);
 
         BeginDrawing();
         ClearBackground(DayNightSkyColor(&gs.daynight));
@@ -60,23 +62,21 @@ int main(void) {
         BeginMode2D(gs.camera);
         WorldDraw(&gs.world, &gs.camera);
         InputDrawCursor(&gs.input);
+        ParticlesDraw(&gs.particles);
         MonstersDraw(&gs.monsters);
         PlayerDraw(&gs.player);
         EndMode2D();
 
         LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
         InvDraw(&gs.inv);
-        PlayerDrawHUD(&gs.player);
+        PlayerDrawHUD(&gs.player, &gs.world, &gs.camera);
         DayNightDrawClock(&gs.daynight);
         QuestDraw(&gs.quests);
-        DrawFPS(SCREEN_W - 80, SCREEN_H - 24);
-
         EndDrawing();
     }
 
     TexturesUnload();
-    if (gs.daynight.finished && gs.player.hp > 0)
-        OutroRun();
+    if (gs.daynight.finished && gs.player.hp > 0) OutroRun();
     CloseWindow();
     return 0;
 }

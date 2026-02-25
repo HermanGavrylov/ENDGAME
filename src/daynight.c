@@ -118,17 +118,48 @@ void DayNightDrawClock(const DayNight *dn) {
     char buf[16];
     snprintf(buf, sizeof(buf), "%02d:%02d", h, m);
 
-    const char *label = dn->isDay ? "Day" : "Night";
-    Color labelCol    = dn->isDay
-                        ? (Color){ 255, 240, 100, 220 }
-                        : (Color){ 160, 180, 255, 220 };
+    int fontSize = 20;
+    int padding  = 14;
 
-    int tw = MeasureText(buf, 18);
-    int lw = MeasureText(label, 14);
-    int bw = (tw > lw ? tw : lw) + 16;
-    int bx = SCREEN_W - bw - 8;
+    int tw = MeasureText(buf, fontSize);
+    int bw = tw + padding * 2 + 28;
+    int bh = 44;
 
-    DrawRectangle(bx, 6, bw, 50, (Color){ 0, 0, 0, 120 });
-    DrawText(buf,   SCREEN_W - tw - 16, 10, 18, WHITE);
-    DrawText(label, SCREEN_W - lw - 16, 34, 14, labelCol);
+    int margin = 16;
+
+    int bx = SCREEN_W - bw - margin;
+    int by = SCREEN_H - bh - margin;
+
+    Color bgCol = dn->isDay
+        ? (Color){ 40, 30, 10, 190 }
+        : (Color){ 15, 20, 40, 190 };
+
+    Color borderCol = dn->isDay
+        ? (Color){ 255, 200, 80, 180 }
+        : (Color){ 120, 160, 255, 180 };
+
+    DrawRectangleRounded((Rectangle){ bx, by, bw, bh }, 0.35f, 8, bgCol);
+
+    DrawRectangleRoundedLines(
+        (Rectangle){ bx, by, bw, bh },
+        0.35f, 8, borderCol
+    );
+
+    int iconX = bx + 16;
+    int iconY = by + bh / 2;
+
+    if (dn->isDay) {
+        DrawCircle(iconX, iconY, 8, (Color){ 255, 220, 90, 230 });
+    } else {
+        DrawCircle(iconX, iconY, 8, (Color){ 200, 210, 255, 220 });
+        DrawCircle(iconX + 3, iconY - 3, 8, bgCol);
+    }
+
+    DrawText(
+        buf,
+        bx + padding + 24,
+        by + (bh - fontSize) / 2,
+        fontSize,
+        WHITE
+    );
 }
