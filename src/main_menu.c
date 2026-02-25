@@ -6,10 +6,9 @@ static bool DrawButton(Rectangle rect, const char* text, Color hoverTint) {
     bool isHovering = CheckCollisionPointRec(mouse, rect);
     
     Color baseBg = { 30, 30, 40, 140 };
-    Color currBg = isHovering ? (Color){ 20, 60, 20, 160 } : baseBg;
     Color borderColor = isHovering ? hoverTint : (Color){ 70, 65, 55, 255 };
 
-    DrawRectangleRec(rect, currBg);
+    DrawRectangleRec(rect, baseBg);
     DrawRectangleLinesEx(rect, 1, borderColor);
 
     int fontSize = 14;
@@ -70,11 +69,11 @@ void DrawMainMenu(MenuSystemState *currentState) {
         *currentState = STATE_GAMEPLAY;
     }
     
-    if (DrawButton((Rectangle){ btnX, py + 105, btnW, btnH }, "ADJUST GEAR", (Color){ 255, 220, 120, 255 })) {
+    if (DrawButton((Rectangle){ btnX, py + 105, btnW, btnH }, "SETTINGS", (Color){ 255, 220, 120, 255 })) {
         *currentState = STATE_SETTINGS;
     }
 
-    if (DrawButton((Rectangle){ btnX, py + 165, btnW, btnH }, "ABANDON", (Color){ 220, 80, 80, 255 })) {
+    if (DrawButton((Rectangle){ btnX, py + 165, btnW, btnH }, "QUIT", (Color){ 220, 80, 80, 255 })) {
         *currentState = STATE_EXIT;
     }
 
