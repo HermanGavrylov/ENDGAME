@@ -1,5 +1,4 @@
 #include "header.h"
-
 #define PATH_LEN            32
 #define BFS_MAX             4096
 #define BFS_W               80
@@ -7,8 +6,13 @@
 #define PATH_RETARGET       1.2f
 #define JUMP_COOLDOWN_TIME  1.0f
 
+static Texture2D idleTexture;
+static Texture2D giantTexture;
+
 void MonstersInit(Monsters *ms) {
     memset(ms, 0, sizeof(Monsters));
+    idleTexture  = LoadTexture("resource/Idle-Sheet.png");
+    giantTexture = LoadTexture("resource/Sprite.png");
 }
 
 static void SpawnMonster(Monsters *ms, Vector2 pos, MonsterType kind) {
@@ -20,11 +24,10 @@ static void SpawnMonster(Monsters *ms, Vector2 pos, MonsterType kind) {
     m->kind          = kind;
     m->breakTX       = -1;
     m->breakTY       = -1;
-
     switch (kind) {
         case MONSTER_TYPE_SPIDER: m->hp = m->maxHp = SPIDER_HP;  break;
         case MONSTER_TYPE_GIANT:  m->hp = m->maxHp = GIANT_HP;   break;
-        default:                  m->hp = m->maxHp = MONSTER_HP;  break;
+        default:                  m->hp = m->maxHp = MONSTER_HP; break;
     }
 }
 
@@ -33,21 +36,25 @@ static int MonsterW(const Monster *m) {
     if (m->kind == MONSTER_TYPE_GIANT)  return GIANT_W;
     return MONSTER_W;
 }
+
 static int MonsterH(const Monster *m) {
     if (m->kind == MONSTER_TYPE_SPIDER) return SPIDER_H;
     if (m->kind == MONSTER_TYPE_GIANT)  return GIANT_H;
     return MONSTER_H;
 }
+
 static float MonsterSpeed(const Monster *m) {
     if (m->kind == MONSTER_TYPE_SPIDER) return SPIDER_SPEED;
     if (m->kind == MONSTER_TYPE_GIANT)  return GIANT_SPEED;
     return MONSTER_SPEED;
 }
+
 static int MonsterDamage(const Monster *m) {
     if (m->kind == MONSTER_TYPE_SPIDER) return SPIDER_DAMAGE;
     if (m->kind == MONSTER_TYPE_GIANT)  return GIANT_DAMAGE;
     return MONSTER_DAMAGE;
 }
+
 static float MonsterBreakTime(const Monster *m) {
     if (m->kind == MONSTER_TYPE_GIANT) return GIANT_BREAK_TIME;
     return MONSTER_BREAK_TIME;
@@ -55,28 +62,22 @@ static float MonsterBreakTime(const Monster *m) {
 
 void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const DayNight *dn) {
     if (dn->isDay) return;
-
     float nightT         = dn->elapsed - DAY_DURATION;
     float spawnInterval  = 8.0f;
     int   spawnsExpected = (int)(nightT / spawnInterval);
     if (ms->count >= spawnsExpected * 2 || ms->count >= MAX_MONSTERS) return;
-
     float side   = (rand() % 2) ? 1.0f : -1.0f;
     float dist   = 280.0f + rand() % 220;
     float spawnX = p->pos.x + side * dist;
-
     int tx = (int)(spawnX / TILE_SIZE);
     if (tx < 1) tx = 1;
     if (tx >= WORLD_W - 1) tx = WORLD_W - 2;
-
     int roll = rand() % 10;
     MonsterType kind = (roll < 6) ? MONSTER_TYPE_ZOMBIE
-                     : (roll < 9) ? MONSTER_TYPE_SPIDER
-                                  : MONSTER_TYPE_GIANT;
-
+                         : (roll < 9) ? MONSTER_TYPE_SPIDER
+                                      : MONSTER_TYPE_GIANT;
     bool  cave   = (rand() % 3) == 0;
     float spawnY = p->pos.y;
-
     if (cave) {
         int startTY = (int)(p->pos.y / TILE_SIZE) + 2;
         if (startTY < 0) startTY = 0;
@@ -99,7 +100,6 @@ void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const Day
             }
         }
     }
-
     SpawnMonster(ms, (Vector2){ spawnX, spawnY }, kind);
 }
 
@@ -114,7 +114,6 @@ static void ResolveMonsterCollision(const World *w, Monster *m) {
     int right  = (int)floorf((rect.x + rect.width  - 0.01f) / TILE_SIZE);
     int top    = (int)floorf(rect.y / TILE_SIZE);
     int bottom = (int)floorf((rect.y + rect.height - 0.01f) / TILE_SIZE);
-
     for (int ty = top; ty <= bottom; ty++) {
         for (int tx = left; tx <= right; tx++) {
             if (!WorldIsSolid(w, tx, ty)) continue;
@@ -157,25 +156,20 @@ static bool BFSWalkable(const World *w, int tx, int ty) {
 static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int gty) {
     int ox = ptx - BFS_W / 2;
     int oy = pty - BFS_H / 2;
-
     static signed char prevX[BFS_H][BFS_W];
     static signed char prevY[BFS_H][BFS_W];
     static bool        visited[BFS_H][BFS_W];
     memset(visited, 0, sizeof(visited));
-
     BFSNode queue[BFS_MAX];
     int head = 0, tail = 0;
     int sx = ptx - ox, sy = pty - oy;
     int ex = gtx - ox, ey = gty - oy;
-
     if (sx < 0 || sx >= BFS_W || sy < 0 || sy >= BFS_H) { m->pathLen = 0; return; }
     if (ex < 0 || ex >= BFS_W || ey < 0 || ey >= BFS_H) { m->pathLen = 0; return; }
-
     visited[sy][sx] = true;
     prevX[sy][sx] = prevY[sy][sx] = -1;
     queue[tail++] = (BFSNode){ (short)sx, (short)sy };
     bool found = false;
-
     while (head < tail && tail < BFS_MAX) {
         BFSNode cur = queue[head++];
         if (cur.x == ex && cur.y == ey) { found = true; break; }
@@ -200,7 +194,6 @@ static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int
             queue[tail++]   = (BFSNode){ (short)nx, (short)ny };
         }
     }
-
     if (!found) { m->pathLen = 0; return; }
     BFSNode raw[PATH_LEN * 2];
     int rawLen = 0, cx = ex, cy = ey;
@@ -222,7 +215,6 @@ static int WallProfileFromGround(const World *w, const Monster *m,
         ? (int)floorf((m->pos.x - 2.0f)               / TILE_SIZE)
         : (int)floorf((m->pos.x + MonsterW(m) + 1.0f) / TILE_SIZE);
     if (checkX < 0 || checkX >= WORLD_W) return 0;
-
     int tyFeet = groundTY - 1;
     int tyHead = groundTY - (MonsterH(m) / TILE_SIZE) - 1;
     int solidCount = 0, lowestSolid = -1;
@@ -270,19 +262,16 @@ static void TryDigDown(Monster *m, World *w, Vector2 pCenter, float dt) {
     }
 }
 
-static void UpdateSpider(Monster *m, const World *w,
-                         Vector2 pCenter, float dt) {
+static void UpdateSpider(Monster *m, const World *w, Vector2 pCenter, float dt) {
     float cx = m->pos.x + SPIDER_W * 0.5f;
     float cy = m->pos.y + SPIDER_H * 0.5f;
     float dx = pCenter.x - cx;
     float dy = pCenter.y - cy;
-
     int txL = (int)floorf((m->pos.x - 1.0f)              / TILE_SIZE);
     int txR = (int)floorf((m->pos.x + SPIDER_W + 0.5f)   / TILE_SIZE);
     int tyM = (int)floorf(cy / TILE_SIZE);
     bool wallL = WorldIsSolid(w, txL, tyM);
     bool wallR = WorldIsSolid(w, txR, tyM);
-
     if (wallL || wallR) {
         m->onWall   = true;
         m->climbDir = (dy > 0) ? 1.0f : -1.0f;
@@ -297,7 +286,6 @@ static void UpdateSpider(Monster *m, const World *w,
         m->vel.y += GRAVITY * dt;
         if (m->vel.y > MAX_FALL_SPEED) m->vel.y = MAX_FALL_SPEED;
     }
-
     m->pos.x += m->vel.x * dt;
     m->pos.y += m->vel.y * dt;
     ResolveMonsterCollision(w, m);
@@ -307,7 +295,6 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                     Particles *ps, Inventory *inv, float defenceMult, float dt) {
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
-
     for (int i = 0; i < ms->count; i++) {
         Monster *m = &ms->list[i];
         if (!m->alive) continue;
@@ -315,7 +302,6 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         if (m->breakCooldown > 0.0f) m->breakCooldown  -= dt;
         if (m->jumpCooldown  > 0.0f) m->jumpCooldown   -= dt;
         m->retargetTimer += dt;
-
         if (m->kind == MONSTER_TYPE_SPIDER) {
             UpdateSpider(m, w, pCenter, dt);
             Rectangle mr = MonsterRect(m);
@@ -335,34 +321,28 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             }
             continue;
         }
-
         Vector2 mCenter = { m->pos.x + MonsterW(m) * 0.5f,
                             m->pos.y + MonsterH(m) * 0.5f };
         float dx   = pCenter.x - mCenter.x;
         float dist = fabsf(dx) + fabsf(pCenter.y - mCenter.y);
-
         int mtx = (int)floorf(mCenter.x / TILE_SIZE);
         int mty = (int)floorf((m->pos.y + MonsterH(m) - 1.0f) / TILE_SIZE);
         int ptx = (int)floorf(pCenter.x / TILE_SIZE);
         int pty = (int)floorf((p->pos.y + PLAYER_H   - 1.0f) / TILE_SIZE);
-
         int by  = (int)floorf((m->pos.y + MonsterH(m) + 0.5f) / TILE_SIZE);
         bool onGround = false;
         int bx0 = (int)floorf((m->pos.x + 1.0f)               / TILE_SIZE);
         int bx1 = (int)floorf((m->pos.x + MonsterW(m) - 1.0f) / TILE_SIZE);
         for (int tx = bx0; tx <= bx1; tx++)
             if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
-
         if (m->retargetTimer >= PATH_RETARGET) {
             m->retargetTimer = 0.0f;
             BuildPath(w, m, mtx, mty, ptx, pty);
         }
-
         bool  hasPath = m->pathLen > 0 && m->pathStep < m->pathLen;
         bool  digging = false;
         float moveX   = 0.0f;
         bool  goLeft  = dx < 0;
-
         if (hasPath) {
             Vector2 target = m->path[m->pathStep];
             float tdx = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
@@ -386,11 +366,9 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         } else {
             moveX = goLeft ? -MonsterSpeed(m) : MonsterSpeed(m);
         }
-
         int wallTX = -1, wallTY = -1;
         int solidCount = onGround
             ? WallProfileFromGround(w, m, goLeft, by, &wallTX, &wallTY) : 0;
-
         if (solidCount > 0) {
             if (CanJumpOver(w, wallTX, wallTY, solidCount)) {
                 if (onGround && m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
@@ -424,19 +402,15 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                 }
             }
         }
-
         if (onGround && dist < MONSTER_DIG_RANGE)
             TryDigDown(m, w, pCenter, dt);
-
         if (!digging) { m->vel.x = moveX; m->facingLeft = goLeft; }
         else            m->vel.x = 0;
-
         m->vel.y += GRAVITY * dt;
         if (m->vel.y > MAX_FALL_SPEED) m->vel.y = MAX_FALL_SPEED;
         m->pos.x += m->vel.x * dt;
         m->pos.y += m->vel.y * dt;
         ResolveMonsterCollision(w, m);
-
         Rectangle mr = MonsterRect(m);
         Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
         if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
@@ -446,7 +420,6 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             ParticlesSpawnBlood(ps, pCenter, 6);
             if (p->hp < 0) p->hp = 0;
         }
-
         if (m->hp <= 0) {
             m->alive = false;
             p->kills++;
@@ -454,7 +427,6 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                 InvAddItem(inv, TILE_MEAT);
         }
     }
-
     int alive = 0;
     for (int i = 0; i < ms->count; i++)
         if (ms->list[i].alive) ms->list[alive++] = ms->list[i];
@@ -465,40 +437,46 @@ void MonstersDraw(const Monsters *ms) {
     for (int i = 0; i < ms->count; i++) {
         const Monster *m = &ms->list[i];
         if (!m->alive) continue;
-
         bool  flash = (m->iframes > 0.0f) && ((int)(m->iframes * 10) % 2 == 0);
         int   mw = MonsterW(m), mh = MonsterH(m);
-        Color body, eyes;
 
-        switch (m->kind) {
-            case MONSTER_TYPE_SPIDER:
-                body = flash ? WHITE : (Color){ 60, 20, 80, 255 };
-                eyes = (Color){ 200, 0, 200, 255 };
-                break;
-            case MONSTER_TYPE_GIANT:
-                body = flash ? WHITE : (Color){ 100, 50, 20, 255 };
-                eyes = (Color){ 255, 80, 0, 255 };
-                break;
-            default:
-                body = flash ? WHITE : (Color){ 180, 30, 30, 255 };
-                eyes = (Color){ 255, 50, 50, 255 };
-                break;
-        }
-
-        DrawRectangle((int)m->pos.x, (int)m->pos.y, mw, mh, body);
-
-        if (m->kind == MONSTER_TYPE_SPIDER) {
-            Color leg = { 80, 30, 100, 255 };
-            for (int l = 0; l < 4; l++) {
-                float lx = m->pos.x + (l < 2 ? -4 : mw + 1);
-                float ly = m->pos.y + 2 + l % 2 * 4;
-                DrawLineEx((Vector2){ m->pos.x + (l < 2 ? 0 : mw), ly },
-                           (Vector2){ lx, ly + 3 }, 1.5f, leg);
+        if (m->kind == MONSTER_TYPE_ZOMBIE) {
+            Rectangle src = { 0, 0, 32, 32 };
+            if (m->facingLeft) src.width = -32;
+            Rectangle dst = { m->pos.x, m->pos.y, (float)mw, (float)mh };
+            Color tint = flash ? (Color){ 255, 100, 100, 255 } : WHITE;
+            DrawTexturePro(idleTexture, src, dst, (Vector2){ 0, 0 }, 0.0f, tint);
+        } else if (m->kind == MONSTER_TYPE_GIANT) {
+            Rectangle src = { 0, 0, 37, 33 };
+            if (m->facingLeft) src.width = -37;
+            Rectangle dst = { m->pos.x, m->pos.y, (float)mw, (float)mh };
+            Color tint = flash ? (Color){ 255, 100, 100, 255 } : WHITE;
+            DrawTexturePro(giantTexture, src, dst, (Vector2){ 0, 0 }, 0.0f, tint);
+        } else {
+            Color body, eyes;
+            switch (m->kind) {
+                case MONSTER_TYPE_SPIDER:
+                    body = flash ? WHITE : (Color){ 60, 20, 80, 255 };
+                    eyes = (Color){ 200, 0, 200, 255 };
+                    break;
+                default:
+                    body = flash ? WHITE : (Color){ 180, 30, 30, 255 };
+                    eyes = (Color){ 255, 50, 50, 255 };
+                    break;
             }
+            DrawRectangle((int)m->pos.x, (int)m->pos.y, mw, mh, body);
+            if (m->kind == MONSTER_TYPE_SPIDER) {
+                Color leg = { 80, 30, 100, 255 };
+                for (int l = 0; l < 4; l++) {
+                    float lx = m->pos.x + (l < 2 ? -4 : mw + 1);
+                    float ly = m->pos.y + 2 + l % 2 * 4;
+                    DrawLineEx((Vector2){ m->pos.x + (l < 2 ? 0 : mw), ly },
+                               (Vector2){ lx, ly + 3 }, 1.5f, leg);
+                }
+            }
+            int eyeX = m->facingLeft ? (int)m->pos.x + 2 : (int)m->pos.x + mw - 5;
+            DrawRectangle(eyeX, (int)m->pos.y + 3, 3, 3, eyes);
         }
-
-        int eyeX = m->facingLeft ? (int)m->pos.x + 2 : (int)m->pos.x + mw - 5;
-        DrawRectangle(eyeX, (int)m->pos.y + 3, 3, 3, eyes);
 
         if (m->breakTX >= 0 && m->breakTimer > 0.0f) {
             float prog = m->breakTimer / MonsterBreakTime(m);
@@ -507,7 +485,6 @@ void MonstersDraw(const Monsters *ms) {
             DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 10,
                           (int)((mw + 4) * prog), 3, (Color){ 255, 165, 0, 255 });
         }
-
         float hpFrac = (float)m->hp / m->maxHp;
         DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 6, mw + 4, 3,
                       (Color){ 60, 0, 0, 200 });

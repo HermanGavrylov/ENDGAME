@@ -49,6 +49,7 @@ int main(void) {
 
     TexturesLoad();
     MobsLoadTextures();
+    Texture2D bgTexture = LoadTexture("resource/Background.png");
 
     GameState gs = {0};
     gs.selectedChar = CHAR_WARRIOR;
@@ -129,6 +130,14 @@ int main(void) {
                 }
 
                 ClearBackground(DayNightSkyColor(&gs.daynight));
+                DrawTexturePro(
+                    bgTexture,
+                    (Rectangle){ 0, 0, bgTexture.width, bgTexture.height },
+                    (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
+                    (Vector2){ 0, 0 },
+                    0.0f,
+                    WHITE
+                );
                 BeginMode2D(gs.camera);
                     WorldDraw(&gs.world, &gs.camera);
                     InputDrawCursor(&gs.input);
@@ -154,6 +163,14 @@ int main(void) {
 
             case STATE_GAMEOVER:
                 ClearBackground(DayNightSkyColor(&gs.daynight));
+                DrawTexturePro(
+                    bgTexture,
+                    (Rectangle){ 0, 0, bgTexture.width, bgTexture.height },
+                    (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
+                    (Vector2){ 0, 0 },
+                    0.0f,
+                    WHITE
+                );
                 BeginMode2D(gs.camera);
                     WorldDraw(&gs.world, &gs.camera);
                     ParticlesDraw(&gs.particles);
@@ -176,6 +193,7 @@ int main(void) {
         }
     }
 
+    UnloadTexture(bgTexture);
     MobsUnloadTextures();
     TexturesUnload();
     CloseAudioDevice();
