@@ -3,6 +3,10 @@
 #include "menu.h"
 #include <stdio.h>
 
+// Extern declaration to access the audio update from menu.c
+// If you put UpdateMenuAudio in menu.h, you don't need the 'extern' line.
+extern void UpdateMenuAudio(void); 
+
 void SaveSettings(GameSettings settings) {
     SaveFileData("config.bin", &settings, sizeof(GameSettings));
 }
@@ -25,6 +29,9 @@ GameSettings LoadSettings(void) {
 }
 
 void DrawSettingsScreen(GameSettings *settings, int *currentState, int previousState) {
+    // --- PERSISTENT MUSIC UPDATE ---
+    UpdateMenuAudio(); 
+
     float sw = (float)GetScreenWidth();
     float sh = (float)GetScreenHeight();
     Vector2 mousePos = GetMousePosition();
@@ -61,29 +68,36 @@ void DrawSettingsScreen(GameSettings *settings, int *currentState, int previousS
     int tw = MeasureText(title, 16);
     DrawText(title, sw/2 - tw/2, py + 8, 16, (Color){ 255, 220, 120, 255 });
 
-    Rectangle volumeBar = { px + 20, py + 80, panelW - 40, 12 };
+    Rectangle volumeBar = { (float)px + 20, (float)py + 80, (float)panelW - 40, 12 };
     
-    if (IsKeyDown(KEY_RIGHT)) settings->volume += 0.005f;
-    if (IsKeyDown(KEY_LEFT)) settings->volume -= 0.005f;
+    // Smooth volume adjustment with keys
+    if (IsKeyDown(KEY_RIGHT)) settings->volume += 0.01f;
+    if (IsKeyDown(KEY_LEFT)) settings->volume -= 0.01f;
 
+    // Mouse control for volume slider
     if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
         if (CheckCollisionPointRec(mousePos, (Rectangle){volumeBar.x, volumeBar.y - 10, volumeBar.width, volumeBar.height + 20})) {
             settings->volume = (mousePos.x - volumeBar.x) / volumeBar.width;
         }
     }
 
+    // Clamp volume values
     if (settings->volume < 0.0f) settings->volume = 0.0f;
     if (settings->volume > 1.0f) settings->volume = 1.0f;
+    
+    // Apply volume changes instantly
     SetMasterVolume(settings->volume);
 
     int volPercent = (int)(settings->volume * 100.0f + 0.5f);
     DrawText(TextFormat("Master Volume: %i%%", volPercent), px + 20, py + 60, 14, (Color){ 230, 220, 200, 255 });
     
+    // Draw Slider Bar
     DrawRectangleRec(volumeBar, (Color){ 30, 30, 30, 255 }); 
-    DrawRectangle(volumeBar.x, volumeBar.y, (int)(volumeBar.width * settings->volume), volumeBar.height, (Color){ 200, 160, 40, 255 }); 
-    DrawRectangleLines(volumeBar.x, volumeBar.y, volumeBar.width, volumeBar.height, (Color){ 80, 75, 60, 255 });
+    DrawRectangle((int)volumeBar.x, (int)volumeBar.y, (int)(volumeBar.width * settings->volume), (int)volumeBar.height, (Color){ 200, 160, 40, 255 }); 
+    DrawRectangleLines((int)volumeBar.x, (int)volumeBar.y, (int)volumeBar.width, (int)volumeBar.height, (Color){ 80, 75, 60, 255 });
     
-    DrawCircle(volumeBar.x + (volumeBar.width * settings->volume), volumeBar.y + volumeBar.height/2, 8, (Color){ 255, 220, 120, 255 });
+    // Draw Slider Handle
+    DrawCircle((int)(volumeBar.x + (volumeBar.width * settings->volume)), (int)(volumeBar.y + volumeBar.height/2), 8, (Color){ 255, 220, 120, 255 });
 
     const char *instr = "Use <- -> or Mouse";
     int iw = MeasureText(instr, 11);
