@@ -173,7 +173,7 @@ void OutroRun(void) {
                      (Color){ 180, 170, 150, sa });
         }
 
-        DrawText("SPACE — skip", 12, SCREEN_H - 24, 12, (Color){ 100, 100, 100, 120 });
+        DrawText("SPACE - skip", 12, SCREEN_H - 24, 12, (Color){ 100, 100, 100, 120 });
 
         EndDrawing();
 

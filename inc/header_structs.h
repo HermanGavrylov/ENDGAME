@@ -68,7 +68,7 @@
 #define DRAG_NONE        -1
 
 #define DAY_DURATION     1.0f
-#define NIGHT_DURATION   150.0f
+#define NIGHT_DURATION   1.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
@@ -104,7 +104,6 @@
 #define MAX_PARTICLES    256
 #define QUEST_COUNT      5
 
-/* ── персонажі ── */
 typedef enum {
     CHAR_WARRIOR = 0,
     CHAR_SCOUT,
@@ -145,7 +144,6 @@ static inline CharDef GetCharDef(CharClass cls) {
     }
 }
 
-/* ── тайли ── */
 typedef enum {
     TILE_AIR    = 0,
     TILE_GRASS,

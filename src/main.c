@@ -42,7 +42,8 @@ int main(void) {
 
     MenuSystemState currentState  = STATE_MENU;
     MenuSystemState previousState = STATE_MENU;
-    bool isPaused = false;
+    bool isPaused  = false;
+    bool needOutro = false;
     GameSettings settings = LoadSettings();
 
     TexturesLoad();
@@ -117,7 +118,7 @@ int main(void) {
                     CameraUpdate(&gs.camera, &gs.player);
 
                     if (gs.player.hp <= 0)    currentState = STATE_GAMEOVER;
-                    if (gs.daynight.finished) currentState = STATE_MENU;
+                    if (gs.daynight.finished) { currentState = STATE_MENU; needOutro = true; }
                 }
 
                 ClearBackground(DayNightSkyColor(&gs.daynight));
@@ -159,10 +160,14 @@ int main(void) {
         }
 
         EndDrawing();
+
+        if (needOutro) {
+            OutroRun();
+            needOutro = false;
+        }
     }
 
     TexturesUnload();
-    if (gs.daynight.finished && gs.player.hp > 0) OutroRun();
     CloseAudioDevice();
     CloseWindow();
     return 0;
