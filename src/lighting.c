@@ -31,13 +31,12 @@ void LightingDraw(const World *w, const Camera2D *cam,
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
 
     if (holdingTorch) {
-        Color torchHand = { 200, 150, 60, (unsigned char)(alpha * 110.0f) };
-        DrawLight(pCenter, TORCH_LIGHT_R, torchHand, cam);
-    } else {
-        Color ambient = { 160, 120, 60, (unsigned char)(alpha * 45.0f) };
-        DrawLight(pCenter, PLAYER_LIGHT_R, ambient, cam);
-    }
-
+    Color torchHand = { 200, 150, 60, (unsigned char)(alpha * 70.0f) };
+    DrawLight(pCenter, TORCH_LIGHT_R, torchHand, cam);
+} else {
+    Color ambient = { 160, 120, 60, (unsigned char)(alpha * 45.0f) };
+    DrawLight(pCenter, PLAYER_LIGHT_R, ambient, cam);
+}
     float visHalfW = (SCREEN_W / cam->zoom) * 0.5f;
     float visHalfH = (SCREEN_H / cam->zoom) * 0.5f;
     int startX = (int)floorf((cam->target.x - visHalfW) / TILE_SIZE) - 1;
@@ -49,7 +48,7 @@ void LightingDraw(const World *w, const Camera2D *cam,
     if (endX > WORLD_W) endX = WORLD_W;
     if (endY > WORLD_H) endY = WORLD_H;
 
-    Color torchCol = { 200, 150, 55, (unsigned char)(alpha * 100.0f) };
+    Color torchCol = { 200, 150, 55, (unsigned char)(alpha * 65.0f) };
 
     for (int ty = startY; ty < endY; ty++) {
         for (int tx = startX; tx < endX; tx++) {

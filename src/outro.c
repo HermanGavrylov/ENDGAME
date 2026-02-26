@@ -105,19 +105,17 @@ static void OutroDrawTypewriter(const char *text, int fontSize, Color col, float
 void OutroRun(void) {
     float t         = 0.0f;
     int   lineIdx   = 0;
-    float bgAlpha   = 1.0f;   /* start from black, fade in */
+    float bgAlpha   = 1.0f;   
     bool  finalPause = false;
     float finalT    = 0.0f;
 
     while (!WindowShouldClose()) {
         float dt = GetFrameTime();
 
-        /* Space skips the whole outro */
         if (IsKeyPressed(KEY_SPACE)) return;
 
         if (finalPause) {
             finalT += dt;
-            /* Fade to black, then hold */
             bgAlpha = finalT / 1.5f;
             if (bgAlpha > 1.0f) bgAlpha = 1.0f;
             if (finalT >= OUTRO_FINAL_HOLD) return;
@@ -138,7 +136,6 @@ void OutroRun(void) {
         float typeDur = typeLen * OUTRO_CHAR_DELAY;
         float hold    = typeDur + OUTRO_LINE_HOLD;
 
-        /* Fade-in for the very first beat after typewriter ends */
         float lineAlpha = 1.0f;
         if (t > hold - OUTRO_FADE_OUT && t < hold)
             lineAlpha = 1.0f - (t - (hold - OUTRO_FADE_OUT)) / OUTRO_FADE_OUT;
@@ -148,7 +145,6 @@ void OutroRun(void) {
         unsigned char ca = (unsigned char)(lineAlpha * 255.0f);
         Color textCol    = { 220, 215, 205, ca };
 
-        /* Keep background dark throughout */
         bgAlpha += (0.88f - bgAlpha) * dt * 2.0f;
 
         BeginDrawing();
@@ -162,7 +158,6 @@ void OutroRun(void) {
             OutroDrawCenteredWrapped(OUTRO_TEXT[lineIdx], fs, textCol);
         }
 
-        /* On the last card show a pulsing "Thank you for playing" subtitle */
         if (lineIdx == OUTRO_LINES - 1) {
             const char *sub = "Thank you for playing";
             int sw = MeasureText(sub, 14);
