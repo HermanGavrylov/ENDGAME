@@ -67,7 +67,7 @@
 #define STACK_MAX        999
 #define DRAG_NONE        -1
 
-#define DAY_DURATION     1.0f
+#define DAY_DURATION     150.0f
 #define NIGHT_DURATION   150.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
@@ -78,6 +78,11 @@
 #define MONSTER_BREAK_TIME     2.2f
 #define MONSTER_DIG_RANGE      320.0f
 #define MONSTER_BREAK_COOLDOWN 0.3f
+
+#define MM_W     120
+#define MM_H     70
+#define MM_PAD   8
+#define MM_SCALE 4
 
 #define MONSTER_W        14
 #define MONSTER_H        20

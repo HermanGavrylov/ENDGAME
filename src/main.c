@@ -141,7 +141,6 @@ int main(void) {
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 InvDraw(&gs.inv);
                 PlayerDrawHUD(&gs.player, &gs.world, &gs.camera);
-                HungerDrawHUD(&gs.player);
                 DayNightDrawClock(&gs.daynight);
                 QuestDraw(&gs.quests);
                 QuestDrawNotif(&gs.quests);

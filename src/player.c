@@ -156,12 +156,7 @@ void PlayerDraw(const Player *p, const Inventory *inv, Color tint, CharClass cls
     DrawHeldItem(p, inv);
 }
 
-#define MM_W     120
-#define MM_H     70
-#define MM_PAD   8
-#define MM_SCALE 4
-
-static void DrawMinimap(const Player *p, const World *w) {
+void DrawMinimap(const Player *p, const World *w) {
     int ox = SCREEN_W - MM_W - MM_PAD;
     int oy = MM_PAD;
     DrawRectangle(ox - 2, oy - 2, MM_W + 4, MM_H + 4, (Color){ 0, 0, 0, 180 });
@@ -184,25 +179,4 @@ static void DrawMinimap(const Player *p, const World *w) {
     }
     DrawRectangle(ox + MM_W / 2 - 1, oy + MM_H / 2 - 1, 3, 3,
                   (Color){ 255, 255, 80, 255 });
-}
-
-void PlayerDrawHUD(const Player *p, const World *w, const Camera2D *cam) {
-    (void)cam;
-    int   barW = 160, barH = 14, barX = 12;
-    int   barY = SCREEN_H - barH - 70;
-    float frac = (float)p->hp / (float)p->maxHp;
-    Color fill = frac > 0.5f  ? (Color){ 50, 200,  80, 255 }
-               : frac > 0.25f ? (Color){ 230, 180,   0, 255 }
-                              : (Color){ 220,  40,  40, 255 };
-    DrawRectangle(barX - 1, barY - 1, barW + 2, barH + 2, (Color){ 0, 0, 0, 180 });
-    DrawRectangle(barX, barY, barW, barH, (Color){ 40, 10, 10, 200 });
-    DrawRectangle(barX, barY, (int)(barW * frac), barH, fill);
-    char buf[32];
-    snprintf(buf, sizeof(buf), "HP  %d / %d", p->hp, p->maxHp);
-    DrawText(buf, barX + 4, barY + 2, 10, WHITE);
-    snprintf(buf, sizeof(buf), "Kills: %d", p->kills);
-    int kw = MeasureText(buf, 16);
-    DrawRectangle(barX - 1, barY - 26, kw + 10, 20, (Color){ 0, 0, 0, 160 });
-    DrawText(buf, barX + 4, barY - 23, 16, (Color){ 255, 200, 60, 255 });
-    DrawMinimap(p, w);
 }

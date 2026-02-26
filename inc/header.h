@@ -49,6 +49,8 @@ bool  InvConsumeActive(Inventory *inv);
 void  InvHandleDrag(Inventory *inv);
 void  InvDraw(const Inventory *inv);
 void  InputInit(InputState *inp);
+void DrawMinimap(const Player *p, const World *w);
+
 void  InputUpdate(InputState *inp, World *w, Player *p,
                   const Camera2D *cam, Inventory *inv, float dt);
 void  InputDrawCursor(const InputState *inp);
