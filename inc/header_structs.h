@@ -104,6 +104,37 @@
 #define MAX_PARTICLES    256
 #define QUEST_COUNT      5
 
+#define HUNGER_MAX        100.0f
+#define HUNGER_DRAIN      1.2f
+#define HUNGER_DMG_RATE   2.0f
+#define HUNGER_DMG_TICK   1.0f
+#define FOOD_DROP_CHANCE  60
+
+#define PATH_LEN            32
+#define BFS_MAX             4096
+#define BFS_W               80
+#define BFS_H               60
+#define PATH_RETARGET       1.2f
+#define JUMP_COOLDOWN_TIME  1.0f
+
+#define MAX_MOBS         32
+#define MOB_IFRAMES      0.4f
+
+#define PIG_W            14
+#define PIG_H            12
+#define PIG_HP           15
+#define PIG_SPEED        45.0f
+#define PIG_FLEE_RANGE   80.0f
+#define PIG_MEAT_DROP    2
+
+#define RABBIT_W         10
+#define RABBIT_H         10
+#define RABBIT_HP        6
+#define RABBIT_SPEED     90.0f
+#define RABBIT_FLEE_RANGE 100.0f
+#define RABBIT_MEAT_DROP  1
+#define RABBIT_JUMP_INTERVAL 1.2f
+
 typedef enum {
     CHAR_WARRIOR = 0,
     CHAR_SCOUT,
@@ -156,6 +187,7 @@ typedef enum {
     TILE_LEAVES,
     TILE_WATER,
     TILE_TORCH,
+    TILE_MEAT,
     TILE_SWORD,
     TILE_COUNT
 } TileType;
@@ -165,6 +197,11 @@ typedef enum {
     MONSTER_TYPE_SPIDER,
     MONSTER_TYPE_GIANT,
 } MonsterType;
+
+typedef enum {
+    MOB_PIG = 0,
+    MOB_RABBIT,
+} MobType;
 
 typedef enum {
     PARTICLE_BLOOD = 0,
@@ -187,6 +224,8 @@ typedef struct {
     int     maxHp;
     float   iframes;
     float   swordTimer;
+    float   hunger;
+    float   hungerDmgTimer;
     bool    attacking;
     int     kills;
 } Player;
@@ -217,6 +256,26 @@ typedef struct {
     Monster list[MAX_MONSTERS];
     int     count;
 } Monsters;
+
+typedef struct {
+    Vector2  pos;
+    Vector2  vel;
+    int      hp;
+    int      maxHp;
+    float    iframes;
+    bool     alive;
+    bool     facingLeft;
+    MobType  kind;
+    float    wanderTimer;
+    float    jumpTimer;
+    bool     onGround;
+} Mob;
+
+typedef struct {
+    Mob   list[MAX_MOBS];
+    int   count;
+    float spawnTimer;
+} Mobs;
 
 typedef struct {
     Vector2      pos;
@@ -286,6 +345,7 @@ typedef struct {
     Inventory  inv;
     DayNight   daynight;
     Monsters   monsters;
+    Mobs       mobs;
     Particles  particles;
     QuestLog   quests;
     CharClass  selectedChar;
@@ -303,6 +363,7 @@ static inline Color TileColor(TileType t) {
         case TILE_LEAVES: return (Color){  34, 139,  34, 255 };
         case TILE_WATER:  return (Color){  64, 164, 223, 180 };
         case TILE_TORCH:  return (Color){ 255, 200,  60, 255 };
+        case TILE_MEAT:   return (Color){ 200,  80,  80, 255 };
         case TILE_SWORD:  return (Color){ 200, 210, 230, 255 };
         default:          return (Color){   0,   0,   0,   0 };
     }
@@ -320,6 +381,7 @@ static inline const char *TileName(TileType t) {
         case TILE_LEAVES: return "Leaves";
         case TILE_WATER:  return "Water";
         case TILE_TORCH:  return "Torch";
+        case TILE_MEAT:   return "Meat";
         case TILE_SWORD:  return "Sword";
         default:          return "Air";
     }

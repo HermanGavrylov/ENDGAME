@@ -14,6 +14,8 @@ void PlayerInit(Player *p, const World *w, CharClass cls) {
     p->facingLeft = false;
     p->maxHp      = PLAYER_MAX_HP + cd.bonusHp;
     p->hp         = p->maxHp;
+    p->hunger        = HUNGER_MAX;
+    p->hungerDmgTimer = HUNGER_DMG_TICK;
     p->iframes    = 0.0f;
     p->swordTimer = 0.0f;
     p->attacking  = false;

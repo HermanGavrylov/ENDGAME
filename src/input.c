@@ -23,11 +23,20 @@ static bool OverlapsPlayer(const Player *p, int tx, int ty) {
     return CheckCollisionRecs(player, tile);
 }
 
-void InputUpdate(InputState *inp, World *w, const Player *p,
+void InputUpdate(InputState *inp, World *w, Player *p,
                  const Camera2D *cam, Inventory *inv, float dt) {
     if (inp->mineCooldown > 0.0f) inp->mineCooldown -= dt;
 
     if (IsKeyPressed(KEY_E)) inv->open = !inv->open;
+    if (IsKeyPressed(KEY_F)) {
+    ItemStack *active = &inv->hotbar[inv->activeSlot];
+    if (active->type == TILE_MEAT && active->count > 0) {
+        p->hunger += 40.0f;
+        if (p->hunger > HUNGER_MAX) p->hunger = HUNGER_MAX;
+        active->count--;
+        if (active->count <= 0) active->type = TILE_AIR;
+    }
+}
 
     for (int i = 0; i < HOTBAR_SIZE; i++)
         if (IsKeyPressed(KEY_ONE + i)) inv->activeSlot = i;
@@ -57,15 +66,16 @@ void InputUpdate(InputState *inp, World *w, const Player *p,
     }
 
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && inp->hoverValid) {
-        ItemStack *active = &inv->hotbar[inv->activeSlot];
-        if (active->type != TILE_AIR &&
-            active->type != TILE_SWORD &&
-            w->tiles[ty][tx].type == TILE_AIR &&
-            !OverlapsPlayer(p, tx, ty)) {
-            w->tiles[ty][tx].type = active->type;
-            InvConsumeActive(inv);
-        }
+    ItemStack *active = &inv->hotbar[inv->activeSlot];
+    if (active->type != TILE_AIR &&
+        active->type != TILE_SWORD &&
+        active->type != TILE_MEAT &&
+        w->tiles[ty][tx].type == TILE_AIR &&
+        !OverlapsPlayer(p, tx, ty)) {
+        w->tiles[ty][tx].type = active->type;
+        InvConsumeActive(inv);
     }
+}
 }
 
 void InputDrawCursor(const InputState *inp) {

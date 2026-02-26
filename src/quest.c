@@ -9,7 +9,8 @@ void QuestInit(QuestLog *ql) {
     ql->quests[1] = (Quest){ .title = "Craft a Sword",  .desc = "Collect 2 iron ore",            .done = false };
     ql->quests[2] = (Quest){ .title = "Light the Night",.desc = "Place at least 1 torch",        .done = false };
     ql->quests[3] = (Quest){ .title = "Go Underground", .desc = "Dig down 10 tiles from surface",.done = false };
-    ql->count = 4;
+    ql->quests[4] = (Quest){ .title = "Hunt for Food", .desc = "Collect 3 pieces of meat", .done = false };
+    ql->count = 5;
 
     memset(ql->wasDone,   0, sizeof(ql->wasDone));
     ql->notifText[0] = '\0';
@@ -38,6 +39,16 @@ void QuestUpdate(QuestLog *ql, const Player *p, const Inventory *inv,
         if (inv->bag[i].type == TILE_IRON) iron += inv->bag[i].count;
     }
 
+    int meat = 0;
+    for (int i = 0; i < HOTBAR_SIZE; i++)
+    if (inv->hotbar[i].type == TILE_MEAT) meat += inv->hotbar[i].count;
+    for (int i = 0; i < INV_SIZE; i++)
+    if (inv->bag[i].type == TILE_MEAT) meat += inv->bag[i].count;
+
+    ql->quests[4].done    = (meat >= 3);
+    ql->progress[4]       = (float)meat / 3.0f;
+    if (ql->progress[4] > 1.0f) ql->progress[4] = 1.0f; 
+
     int torchesPlaced = 0;
     int surfaceTY     = SURFACE_LEVEL;
     int playerTY      = (int)(p->pos.y / TILE_SIZE);
@@ -61,7 +72,6 @@ void QuestUpdate(QuestLog *ql, const Player *p, const Inventory *inv,
         if (ql->progress[i] < 0.0f) ql->progress[i] = 0.0f;
     }
 
-    /* ── detect newly completed quests and trigger banner ── */
     for (int i = 0; i < ql->count; i++) {
         if (ql->quests[i].done && !ql->wasDone[i]) {
             snprintf(ql->notifText, sizeof(ql->notifText),

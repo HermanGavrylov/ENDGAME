@@ -31,6 +31,7 @@ static const char *TilePath(TileType t) {
         case TILE_WOOD:   return "resources/tile_0006.png";
         case TILE_LEAVES: return "resources/tile_0007.png";
         case TILE_WATER:  return "resources/tile_0008.png";
+        case TILE_MEAT:   return "resource/tile_0001.png";
         default:          return NULL;
     }
 }

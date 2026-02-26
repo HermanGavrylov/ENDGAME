@@ -248,7 +248,7 @@ void InvDraw(const Inventory *inv) {
     if (inv->open) DrawBag(inv);
     DrawDraggedItem(inv);
 
-    const char *controls = "WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place";
+    const char *controls = "WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place | F - eat";
 
     int cx = 10;
     int cy = 10;

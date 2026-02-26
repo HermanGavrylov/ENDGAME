@@ -26,6 +26,7 @@ static void ResetGame(GameState *gs) {
     gs->inv.hotbar[0].count = cd.startTorches;
     DayNightInit(&gs->daynight);
     MonstersInit(&gs->monsters);
+    MobsInit(&gs->mobs, &gs->world);
     ParticlesInit(&gs->particles);
     QuestInit(&gs->quests);
     gs->camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
@@ -47,6 +48,7 @@ int main(void) {
     GameSettings settings = LoadSettings();
 
     TexturesLoad();
+    MobsLoadTextures();
 
     GameState gs = {0};
     gs.selectedChar = CHAR_WARRIOR;
@@ -56,6 +58,7 @@ int main(void) {
     InvInit(&gs.inv);
     DayNightInit(&gs.daynight);
     MonstersInit(&gs.monsters);
+    MobsInit(&gs.mobs, &gs.world);
     ParticlesInit(&gs.particles);
     QuestInit(&gs.quests);
     gs.camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
@@ -97,6 +100,7 @@ int main(void) {
                 if (!isPaused) {
                     float dt    = GetFrameTime();
                     float wheel = GetMouseWheelMove();
+                    HungerUpdate(&gs.player, dt);
 
                     if (wheel != 0.0f && !gs.inv.open) {
                         gs.camera.zoom += wheel * 0.15f;
@@ -107,7 +111,10 @@ int main(void) {
                     DayNightUpdate(&gs.daynight, dt);
                     MonstersSpawnNight(&gs.monsters, &gs.player, &gs.world, &gs.daynight);
                     MonstersUpdate(&gs.monsters, &gs.player, &gs.world, &gs.particles,
-                                   cd.defenceMult, dt);
+                                   &gs.inv, cd.defenceMult, dt);
+                    MobsSpawnDay(&gs.mobs, &gs.world, &gs.daynight, dt);
+                    MobsUpdate(&gs.mobs, &gs.player, &gs.world, &gs.particles, &gs.inv, dt);
+                    MobsAttack(&gs.mobs, &gs.player, &gs.particles, &gs.inv, cd.damageMult);
                     InputUpdate(&gs.input, &gs.world, &gs.player, &gs.camera, &gs.inv, dt);
                     PlayerUpdate(&gs.player, &gs.world, dt, cd.speedMult);
                     PlayerAttack(&gs.player, &gs.monsters, &gs.particles, &gs.inv,
@@ -127,12 +134,14 @@ int main(void) {
                     InputDrawCursor(&gs.input);
                     ParticlesDraw(&gs.particles);
                     MonstersDraw(&gs.monsters);
+                    MobsDraw(&gs.mobs);
                     PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
 
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 InvDraw(&gs.inv);
                 PlayerDrawHUD(&gs.player, &gs.world, &gs.camera);
+                HungerDrawHUD(&gs.player);
                 DayNightDrawClock(&gs.daynight);
                 QuestDraw(&gs.quests);
                 QuestDrawNotif(&gs.quests);
@@ -150,6 +159,7 @@ int main(void) {
                     WorldDraw(&gs.world, &gs.camera);
                     ParticlesDraw(&gs.particles);
                     MonstersDraw(&gs.monsters);
+                    MobsDraw(&gs.mobs);
                     PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
@@ -167,6 +177,7 @@ int main(void) {
         }
     }
 
+    MobsUnloadTextures();
     TexturesUnload();
     CloseAudioDevice();
     CloseWindow();

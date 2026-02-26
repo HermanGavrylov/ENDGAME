@@ -304,7 +304,7 @@ static void UpdateSpider(Monster *m, const World *w,
 }
 
 void MonstersUpdate(Monsters *ms, Player *p, World *w,
-                    Particles *ps, float defenceMult, float dt) {
+                    Particles *ps, Inventory *inv, float defenceMult, float dt) {
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
 
@@ -327,7 +327,12 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                 ParticlesSpawnBlood(ps, pCenter, 6);
                 if (p->hp < 0) p->hp = 0;
             }
-            if (m->hp <= 0) { m->alive = false; p->kills++; }
+            if (m->hp <= 0) {
+                m->alive = false;
+                p->kills++;
+                if (rand() % 100 < FOOD_DROP_CHANCE)
+                    InvAddItem(inv, TILE_MEAT);
+            }
             continue;
         }
 
@@ -442,7 +447,12 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             if (p->hp < 0) p->hp = 0;
         }
 
-        if (m->hp <= 0) { m->alive = false; p->kills++; }
+        if (m->hp <= 0) {
+            m->alive = false;
+            p->kills++;
+            if (rand() % 100 < FOOD_DROP_CHANCE)
+                InvAddItem(inv, TILE_MEAT);
+        }
     }
 
     int alive = 0;
