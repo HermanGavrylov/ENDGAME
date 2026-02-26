@@ -54,7 +54,8 @@
 #define SWORD_COOLDOWN   0.45f
 
 #define MINE_REACH       5
-#define MINE_COOLDOWN    0.25f
+#define MINE_COOLDOWN    0.10f
+#define MINE_TIME        0.5f
 
 #define TORCH_RADIUS     120.0f
 #define TORCH_LIGHT_R    140.0f
@@ -316,6 +317,9 @@ typedef struct {
     float   mineCooldown;
     Vector2 hoveredTile;
     bool    hoverValid;
+    float   breakTimer;
+    int     breakTX;
+    int     breakTY;
 } InputState;
 
 typedef struct {

@@ -1,11 +1,9 @@
 #include "header.h"
 #include "menu.h"
 
-// --- Global-to-file variables for persistent Audio ---
 static Music menuMusic;
 static bool musicLoaded = false;
 
-// Helper to update the music from any menu-related function
 void UpdateMenuAudio(void) {
     if (!musicLoaded) {
         menuMusic = LoadMusicStream("resource/sound/menu_background.wav");
