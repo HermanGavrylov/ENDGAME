@@ -248,6 +248,29 @@ void InvDraw(const Inventory *inv) {
     if (inv->open) DrawBag(inv);
     DrawDraggedItem(inv);
 
-    DrawText("WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place | TAB - quest",
-             10, 10, 14, (Color){ 255, 255, 255, 180 });
+    const char *controls = "WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place";
+
+    int cx = 10;
+    int cy = 10;
+    int cFont = 14;
+
+    DrawText(
+        controls,
+        cx,
+        cy,
+        cFont,
+        (Color){ 255, 255, 255, 180 }
+    );
+
+    const char *tabHint = "[TAB] Quests";
+
+    int tabY = cy + cFont + 6;
+
+    DrawText(
+        tabHint,
+        cx,
+        tabY,
+        15,
+        (Color){ 255, 220, 60, 255 }
+    );
 }

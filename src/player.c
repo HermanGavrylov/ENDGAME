@@ -1,6 +1,7 @@
 #include "header.h"
 
-void PlayerInit(Player *p, const World *w) {
+void PlayerInit(Player *p, const World *w, CharClass cls) {
+    CharDef cd  = GetCharDef(cls);
     int cx      = WORLD_W / 2;
     int surface = SURFACE_LEVEL;
     for (int y = 0; y < WORLD_H; y++) {
@@ -11,7 +12,8 @@ void PlayerInit(Player *p, const World *w) {
     p->vel        = (Vector2){ 0.0f, 0.0f };
     p->onGround   = false;
     p->facingLeft = false;
-    p->hp         = PLAYER_MAX_HP;
+    p->maxHp      = PLAYER_MAX_HP + cd.bonusHp;
+    p->hp         = p->maxHp;
     p->iframes    = 0.0f;
     p->swordTimer = 0.0f;
     p->attacking  = false;
@@ -50,16 +52,17 @@ static Rectangle ResolveCollision(const World *w, Rectangle rect, Vector2 *vel) 
     return rect;
 }
 
-void PlayerUpdate(Player *p, const World *w, float dt) {
+void PlayerUpdate(Player *p, const World *w, float dt, float speedMult) {
     if (p->iframes    > 0.0f) p->iframes    -= dt;
     if (p->swordTimer > 0.0f) {
         p->swordTimer -= dt;
         if (p->swordTimer <= 0.0f) p->attacking = false;
     }
 
+    float speed = PLAYER_SPEED * speedMult;
     p->vel.x = 0;
-    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  { p->vel.x = -PLAYER_SPEED; p->facingLeft = true;  }
-    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) { p->vel.x =  PLAYER_SPEED; p->facingLeft = false; }
+    if (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT))  { p->vel.x = -speed; p->facingLeft = true;  }
+    if (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) { p->vel.x =  speed; p->facingLeft = false; }
 
     if (p->onGround && (IsKeyPressed(KEY_W) || IsKeyPressed(KEY_SPACE) || IsKeyPressed(KEY_UP))) {
         p->vel.y = JUMP_FORCE; p->onGround = false;
@@ -86,7 +89,7 @@ bool PlayerHasSwordActive(const Inventory *inv) {
 }
 
 void PlayerAttack(Player *p, Monsters *ms, Particles *ps,
-                  const Inventory *inv, float dt) {
+                  const Inventory *inv, float damageMult, float dt) {
     (void)dt;
     if (!PlayerHasSwordActive(inv)) { p->attacking = false; return; }
     if (!IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !IsKeyPressed(KEY_Z)) return;
@@ -104,6 +107,8 @@ void PlayerAttack(Player *p, Monsters *ms, Particles *ps,
     float hitX = cx + dir * (PLAYER_W * 0.5f + hitW * 0.5f);
     Rectangle hitbox = { hitX - hitW * 0.5f, cy - hitH * 0.5f, hitW, hitH };
 
+    int dmg = (int)(SWORD_DAMAGE * damageMult);
+
     for (int i = 0; i < ms->count; i++) {
         Monster *m = &ms->list[i];
         if (!m->alive || m->iframes > 0.0f) continue;
@@ -113,7 +118,7 @@ void PlayerAttack(Player *p, Monsters *ms, Particles *ps,
                : (m->kind == MONSTER_TYPE_GIANT)  ? GIANT_H : MONSTER_H;
         Rectangle mr = { m->pos.x, m->pos.y, (float)mw, (float)mh };
         if (CheckCollisionRecs(hitbox, mr)) {
-            m->hp     -= SWORD_DAMAGE;
+            m->hp     -= dmg;
             m->iframes = MONSTER_IFRAMES;
             float kbDir = (m->pos.x > cx) ? 1.0f : -1.0f;
             m->vel.x = kbDir * 120.0f;
@@ -125,48 +130,45 @@ void PlayerAttack(Player *p, Monsters *ms, Particles *ps,
     }
 }
 
-static void DrawSword(const Player *p) {
-    if (!p->attacking) return;
-    float progress = 1.0f - (p->swordTimer / SWORD_COOLDOWN);
-    float dir      = p->facingLeft ? -1.0f : 1.0f;
+static void DrawHeldItem(const Player *p, const Inventory *inv) {
     float cx = p->pos.x + PLAYER_W * 0.5f;
     float cy = p->pos.y + PLAYER_H * 0.4f;
-    float angle = p->facingLeft
-        ? (180.0f - (1.0f - progress) * 90.0f)
-        : ((1.0f - progress) * 90.0f - 45.0f);
-    float rad = angle * DEG2RAD;
-    float ex  = cx + dir * cosf(rad) * SWORD_REACH;
-    float ey  = cy + sinf(rad) * SWORD_REACH;
-    DrawLineEx((Vector2){ cx, cy }, (Vector2){ ex, ey }, 2.5f,
-               (Color){ 200, 210, 230, 230 });
-    float gx = cx + dir * PLAYER_W * 0.5f;
-    DrawRectangle((int)(gx - 3), (int)(cy - 3), 6, 6, (Color){ 160, 130, 60, 255 });
+    TileType held = inv->hotbar[inv->activeSlot].type;
+
+    if (held == TILE_TORCH) {
+        TorchDrawInHand(cx, cy, p->facingLeft);
+        return;
+    }
+    if (held == TILE_SWORD && p->attacking) {
+        float progress = 1.0f - (p->swordTimer / SWORD_COOLDOWN);
+        float angle = p->facingLeft
+            ? (180.0f - (1.0f - progress) * 90.0f)
+            : ((1.0f - progress) * 90.0f - 45.0f);
+        SwordDrawInHand(cx, cy, angle, SWORD_REACH, p->facingLeft);
+    }
 }
 
-void PlayerDraw(const Player *p) {
+void PlayerDraw(const Player *p, const Inventory *inv, Color tint, CharClass cls) {
     bool flash = (p->iframes > 0.0f) && ((int)(p->iframes * 10) % 2 == 0);
-    if (!flash) PlayerSpriteDraw(p->pos.x, p->pos.y, p->facingLeft);
-    DrawSword(p);
+    if (!flash) PlayerSpriteDrawClass(p->pos.x, p->pos.y, p->facingLeft, tint, cls);
+    DrawHeldItem(p, inv);
 }
 
 #define MM_W     120
 #define MM_H     70
 #define MM_PAD   8
-#define MM_SCALE 4  
+#define MM_SCALE 4
 
 static void DrawMinimap(const Player *p, const World *w) {
     int ox = SCREEN_W - MM_W - MM_PAD;
     int oy = MM_PAD;
-
     DrawRectangle(ox - 2, oy - 2, MM_W + 4, MM_H + 4, (Color){ 0, 0, 0, 180 });
     DrawRectangleLines(ox - 2, oy - 2, MM_W + 4, MM_H + 4,
                        (Color){ 120, 120, 120, 200 });
-
-    int ptx = (int)(p->pos.x / TILE_SIZE);
-    int pty = (int)(p->pos.y / TILE_SIZE);
+    int ptx    = (int)(p->pos.x / TILE_SIZE);
+    int pty    = (int)(p->pos.y / TILE_SIZE);
     int startX = ptx - (MM_W * MM_SCALE) / 2;
     int startY = pty - (MM_H * MM_SCALE) / 2;
-
     for (int py = 0; py < MM_H; py++) {
         for (int px = 0; px < MM_W; px++) {
             int tx = startX + px * MM_SCALE;
@@ -174,40 +176,31 @@ static void DrawMinimap(const Player *p, const World *w) {
             if (!WorldInBounds(tx, ty)) continue;
             TileType t = w->tiles[ty][tx].type;
             if (t == TILE_AIR) continue;
-            Color c = TileColor(t);
-            c.a = 220;
+            Color c = TileColor(t); c.a = 220;
             DrawPixel(ox + px, oy + py, c);
         }
     }
-
     DrawRectangle(ox + MM_W / 2 - 1, oy + MM_H / 2 - 1, 3, 3,
                   (Color){ 255, 255, 80, 255 });
 }
 
 void PlayerDrawHUD(const Player *p, const World *w, const Camera2D *cam) {
     (void)cam;
-
-    /* HP bar */
     int   barW = 160, barH = 14, barX = 12;
     int   barY = SCREEN_H - barH - 70;
-    float frac = (float)p->hp / PLAYER_MAX_HP;
-    Color fill = frac > 0.5f ? (Color){ 50, 200, 80, 255 }
-               : frac > 0.25f ? (Color){ 230, 180, 0, 255 }
-                              : (Color){ 220, 40, 40, 255 };
+    float frac = (float)p->hp / (float)p->maxHp;
+    Color fill = frac > 0.5f  ? (Color){ 50, 200,  80, 255 }
+               : frac > 0.25f ? (Color){ 230, 180,   0, 255 }
+                              : (Color){ 220,  40,  40, 255 };
     DrawRectangle(barX - 1, barY - 1, barW + 2, barH + 2, (Color){ 0, 0, 0, 180 });
     DrawRectangle(barX, barY, barW, barH, (Color){ 40, 10, 10, 200 });
     DrawRectangle(barX, barY, (int)(barW * frac), barH, fill);
     char buf[32];
-    snprintf(buf, sizeof(buf), "HP  %d / %d", p->hp, PLAYER_MAX_HP);
+    snprintf(buf, sizeof(buf), "HP  %d / %d", p->hp, p->maxHp);
     DrawText(buf, barX + 4, barY + 2, 10, WHITE);
-
     snprintf(buf, sizeof(buf), "Kills: %d", p->kills);
     int kw = MeasureText(buf, 16);
     DrawRectangle(barX - 1, barY - 26, kw + 10, 20, (Color){ 0, 0, 0, 160 });
     DrawText(buf, barX + 4, barY - 23, 16, (Color){ 255, 200, 60, 255 });
-
-    if (p->attacking)
-        DrawText("SWORD", barX, barY - 46, 11, (Color){ 200, 210, 230, 200 });
-
     DrawMinimap(p, w);
 }

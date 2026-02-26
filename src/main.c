@@ -8,20 +8,39 @@ void CameraUpdate(Camera2D *cam, const Player *p) {
     float halfH    = (SCREEN_H * 0.5f) / cam->zoom;
     float worldPxW = WORLD_W * TILE_SIZE;
     float worldPxH = WORLD_H * TILE_SIZE;
-    
     if (cam->target.x < halfW)            cam->target.x = halfW;
     if (cam->target.y < halfH)            cam->target.y = halfH;
     if (cam->target.x > worldPxW - halfW) cam->target.x = worldPxW - halfW;
     if (cam->target.y > worldPxH - halfH) cam->target.y = worldPxH - halfH;
 }
 
+static void ResetGame(GameState *gs) {
+    CharDef cd = GetCharDef(gs->selectedChar);
+    WorldGenerate(&gs->world);
+    PlayerInit(&gs->player, &gs->world, gs->selectedChar);
+    InputInit(&gs->input);
+    InvInit(&gs->inv);
+    gs->inv.hotbar[1].type  = TILE_SWORD;
+    gs->inv.hotbar[1].count = 1;
+    gs->inv.hotbar[0].type  = TILE_TORCH;
+    gs->inv.hotbar[0].count = cd.startTorches;
+    DayNightInit(&gs->daynight);
+    MonstersInit(&gs->monsters);
+    ParticlesInit(&gs->particles);
+    QuestInit(&gs->quests);
+    gs->camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
+    gs->camera.target   = gs->player.pos;
+    gs->camera.rotation = 0.0f;
+    gs->camera.zoom     = 2.5f;
+}
+
 int main(void) {
     InitWindow(SCREEN_W, SCREEN_H, "The Dark");
-    InitAudioDevice();      // Initialize audio for volume settings
+    InitAudioDevice();
     SetTargetFPS(TARGET_FPS);
-    SetExitKey(KEY_NULL);   // Disable default ESC exit to use it for menus
+    SetExitKey(KEY_NULL);
 
-    MenuSystemState currentState = STATE_MENU;
+    MenuSystemState currentState  = STATE_MENU;
     MenuSystemState previousState = STATE_MENU;
     bool isPaused = false;
     GameSettings settings = LoadSettings();
@@ -29,53 +48,53 @@ int main(void) {
     TexturesLoad();
 
     GameState gs = {0};
+    gs.selectedChar = CHAR_WARRIOR;
     WorldGenerate(&gs.world);
-    PlayerInit(&gs.player, &gs.world);
+    PlayerInit(&gs.player, &gs.world, gs.selectedChar);
     InputInit(&gs.input);
     InvInit(&gs.inv);
-    
-    gs.inv.hotbar[1].type  = TILE_SWORD;
-    gs.inv.hotbar[1].count = 1;
-    
     DayNightInit(&gs.daynight);
     MonstersInit(&gs.monsters);
     ParticlesInit(&gs.particles);
     QuestInit(&gs.quests);
-
     gs.camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
     gs.camera.target   = gs.player.pos;
     gs.camera.rotation = 0.0f;
     gs.camera.zoom     = 2.5f;
 
     while (!WindowShouldClose() && currentState != STATE_EXIT) {
-        
+
         BeginDrawing();
         ClearBackground(BLACK);
 
+        CharDef cd = GetCharDef(gs.selectedChar);
+
         switch (currentState) {
-            
+
             case STATE_MENU:
                 DrawMainMenu(&currentState);
                 previousState = STATE_MENU;
-                // If user just clicked "Start", reset pause state
-                if (currentState == STATE_GAMEPLAY){
-                     isPaused = false;
+                break;
+
+            case STATE_CHARSELECT:
+                DrawCharSelect(&currentState, &gs.selectedChar);
+                if (currentState == STATE_GAMEPLAY) {
+                    ResetGame(&gs);
+                    isPaused = false;
                     IntroRun();
-                    }
+                }
                 break;
 
             case STATE_SETTINGS:
-                // Draw the draggable volume slider from settings.c
                 DrawSettingsScreen(&settings, (int*)&currentState, previousState);
                 break;
 
             case STATE_GAMEPLAY:
-                if (IsKeyPressed(KEY_ESCAPE)) {
+                if (IsKeyPressed(KEY_ESCAPE))
                     isPaused = !isPaused;
-                }
 
                 if (!isPaused) {
-                    float dt = GetFrameTime();
+                    float dt    = GetFrameTime();
                     float wheel = GetMouseWheelMove();
 
                     if (wheel != 0.0f && !gs.inv.open) {
@@ -86,28 +105,28 @@ int main(void) {
 
                     DayNightUpdate(&gs.daynight, dt);
                     MonstersSpawnNight(&gs.monsters, &gs.player, &gs.world, &gs.daynight);
-                    MonstersUpdate(&gs.monsters, &gs.player, &gs.world, &gs.particles, dt);
+                    MonstersUpdate(&gs.monsters, &gs.player, &gs.world, &gs.particles,
+                                   cd.defenceMult, dt);
                     InputUpdate(&gs.input, &gs.world, &gs.player, &gs.camera, &gs.inv, dt);
-                    PlayerUpdate(&gs.player, &gs.world, dt);
-                    PlayerAttack(&gs.player, &gs.monsters, &gs.particles, &gs.inv, dt);
+                    PlayerUpdate(&gs.player, &gs.world, dt, cd.speedMult);
+                    PlayerAttack(&gs.player, &gs.monsters, &gs.particles, &gs.inv,
+                                 cd.damageMult, dt);
                     ParticlesUpdate(&gs.particles, dt);
                     InvHandleDrag(&gs.inv);
                     QuestUpdate(&gs.quests, &gs.player, &gs.inv, &gs.world, dt);
                     CameraUpdate(&gs.camera, &gs.player);
 
-                    if (gs.player.hp <= 0 || gs.daynight.finished) {
-                        currentState = STATE_MENU;
-                    }
+                    if (gs.player.hp <= 0)    currentState = STATE_GAMEOVER;
+                    if (gs.daynight.finished) currentState = STATE_MENU;
                 }
 
                 ClearBackground(DayNightSkyColor(&gs.daynight));
-
                 BeginMode2D(gs.camera);
                     WorldDraw(&gs.world, &gs.camera);
                     InputDrawCursor(&gs.input);
                     ParticlesDraw(&gs.particles);
                     MonstersDraw(&gs.monsters);
-                    PlayerDraw(&gs.player);
+                    PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
 
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
@@ -115,13 +134,25 @@ int main(void) {
                 PlayerDrawHUD(&gs.player, &gs.world, &gs.camera);
                 DayNightDrawClock(&gs.daynight);
                 QuestDraw(&gs.quests);
+                QuestDrawNotif(&gs.quests);
 
                 if (isPaused) {
                     DrawPauseMenu(&isPaused, &currentState);
-                    if (currentState == STATE_SETTINGS) {
+                    if (currentState == STATE_SETTINGS)
                         previousState = STATE_GAMEPLAY;
-                    }
                 }
+                break;
+
+            case STATE_GAMEOVER:
+                ClearBackground(DayNightSkyColor(&gs.daynight));
+                BeginMode2D(gs.camera);
+                    WorldDraw(&gs.world, &gs.camera);
+                    ParticlesDraw(&gs.particles);
+                    MonstersDraw(&gs.monsters);
+                    PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
+                EndMode2D();
+                LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
+                DrawGameOver(&currentState, &gs);
                 break;
 
             default: break;
@@ -132,9 +163,7 @@ int main(void) {
 
     TexturesUnload();
     if (gs.daynight.finished && gs.player.hp > 0) OutroRun();
-    
-    CloseAudioDevice(); 
+    CloseAudioDevice();
     CloseWindow();
-    
     return 0;
 }

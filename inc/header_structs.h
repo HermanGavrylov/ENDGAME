@@ -67,16 +67,16 @@
 #define STACK_MAX        999
 #define DRAG_NONE        -1
 
-#define DAY_DURATION     150.0f
+#define DAY_DURATION     1.0f
 #define NIGHT_DURATION   150.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
 
-#define MAX_MONSTERS          64
-#define MONSTER_IFRAMES       0.5f
-#define MONSTER_BREAK_TIME    2.2f
-#define MONSTER_DIG_RANGE     320.0f
+#define MAX_MONSTERS           64
+#define MONSTER_IFRAMES        0.5f
+#define MONSTER_BREAK_TIME     2.2f
+#define MONSTER_DIG_RANGE      320.0f
 #define MONSTER_BREAK_COOLDOWN 0.3f
 
 #define MONSTER_W        14
@@ -102,9 +102,50 @@
 #define GIANT_BREAK_TIME 1.2f
 
 #define MAX_PARTICLES    256
-
 #define QUEST_COUNT      5
 
+/* ── персонажі ── */
+typedef enum {
+    CHAR_WARRIOR = 0,
+    CHAR_SCOUT,
+    CHAR_TANK,
+    CHAR_COUNT
+} CharClass;
+
+typedef struct {
+    CharClass   cls;
+    const char *name;
+    const char *desc;
+    Color       tint;
+    int         bonusHp;
+    float       speedMult;
+    float       damageMult;
+    float       defenceMult;
+    int         startTorches;
+} CharDef;
+
+static inline CharDef GetCharDef(CharClass cls) {
+    switch (cls) {
+        case CHAR_WARRIOR:
+            return (CharDef){ CHAR_WARRIOR, "Warrior",
+                "  +20 HP  |  +25% sword dmg  ",
+                (Color){ 255, 110, 110, 255 }, 20, 1.0f, 1.25f, 1.0f, 5 };
+        case CHAR_SCOUT:
+            return (CharDef){ CHAR_SCOUT, "Scout",
+                "  +30% speed  |  x20 torches  ",
+                (Color){ 100, 230, 100, 255 }, 0, 1.3f, 1.0f, 1.0f, 20 };
+        case CHAR_TANK:
+            return (CharDef){ CHAR_TANK, "Tank",
+                "  +40 HP  |  -15% dmg taken  ",
+                (Color){ 100, 160, 255, 255 }, 40, 0.9f, 1.0f, 0.85f, 5 };
+        default:
+            return (CharDef){ CHAR_WARRIOR, "Warrior",
+                "  +20 HP  |  +25% sword dmg  ",
+                WHITE, 20, 1.0f, 1.25f, 1.0f, 5 };
+    }
+}
+
+/* ── тайли ── */
 typedef enum {
     TILE_AIR    = 0,
     TILE_GRASS,
@@ -145,6 +186,7 @@ typedef struct {
     bool    onGround;
     bool    facingLeft;
     int     hp;
+    int     maxHp;
     float   iframes;
     float   swordTimer;
     bool    attacking;
@@ -169,9 +211,8 @@ typedef struct {
     int         pathStep;
     float       retargetTimer;
     float       jumpCooldown;
-    /* spider wall-climb */
     bool        onWall;
-    float       climbDir;   /* +1 down, -1 up */
+    float       climbDir;
 } Monster;
 
 typedef struct {
@@ -180,13 +221,13 @@ typedef struct {
 } Monsters;
 
 typedef struct {
-    Vector2       pos;
-    Vector2       vel;
-    float         life;
-    float         maxLife;
-    Color         color;
-    float         size;
-    ParticleType  kind;
+    Vector2      pos;
+    Vector2      vel;
+    float        life;
+    float        maxLife;
+    Color        color;
+    float        size;
+    ParticleType kind;
 } Particle;
 
 typedef struct {
@@ -234,6 +275,9 @@ typedef struct {
     int   count;
     bool  show;
     float fadeAlpha;
+    bool  wasDone[QUEST_COUNT];
+    char  notifText[64];
+    float notifTimer;
 } QuestLog;
 
 typedef struct {
@@ -246,6 +290,7 @@ typedef struct {
     Monsters   monsters;
     Particles  particles;
     QuestLog   quests;
+    CharClass  selectedChar;
 } GameState;
 
 static inline Color TileColor(TileType t) {
@@ -282,7 +327,7 @@ static inline const char *TileName(TileType t) {
     }
 }
 
-static inline bool TileIsLiquid(TileType t)   { return t == TILE_WATER; }
+static inline bool TileIsLiquid(TileType t)    { return t == TILE_WATER; }
 static inline bool TileIsPassable(TileType t)  { return t == TILE_WOOD || t == TILE_LEAVES || t == TILE_TORCH; }
 static inline bool TileEmitsLight(TileType t)  { return t == TILE_TORCH; }
 

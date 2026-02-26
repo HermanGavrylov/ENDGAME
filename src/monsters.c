@@ -22,15 +22,9 @@ static void SpawnMonster(Monsters *ms, Vector2 pos, MonsterType kind) {
     m->breakTY       = -1;
 
     switch (kind) {
-        case MONSTER_TYPE_SPIDER:
-            m->hp = m->maxHp = SPIDER_HP;
-            break;
-        case MONSTER_TYPE_GIANT:
-            m->hp = m->maxHp = GIANT_HP;
-            break;
-        default:
-            m->hp = m->maxHp = MONSTER_HP;
-            break;
+        case MONSTER_TYPE_SPIDER: m->hp = m->maxHp = SPIDER_HP;  break;
+        case MONSTER_TYPE_GIANT:  m->hp = m->maxHp = GIANT_HP;   break;
+        default:                  m->hp = m->maxHp = MONSTER_HP;  break;
     }
 }
 
@@ -225,7 +219,7 @@ static int WallProfileFromGround(const World *w, const Monster *m,
                                   bool goingLeft, int groundTY,
                                   int *outTX, int *outTY) {
     int checkX = goingLeft
-        ? (int)floorf((m->pos.x - 2.0f)             / TILE_SIZE)
+        ? (int)floorf((m->pos.x - 2.0f)               / TILE_SIZE)
         : (int)floorf((m->pos.x + MonsterW(m) + 1.0f) / TILE_SIZE);
     if (checkX < 0 || checkX >= WORLD_W) return 0;
 
@@ -249,9 +243,9 @@ static bool CanJumpOver(const World *w, int wallTX, int wallTY, int solidCount) 
 static void TryDigDown(Monster *m, World *w, Vector2 pCenter, float dt) {
     float myBottom = m->pos.y + MonsterH(m);
     if (pCenter.y + PLAYER_H * 0.5f <= myBottom) return;
-    int digTX0 = (int)floorf((m->pos.x + 2.0f)             / TILE_SIZE);
+    int digTX0 = (int)floorf((m->pos.x + 2.0f)               / TILE_SIZE);
     int digTX1 = (int)floorf((m->pos.x + MonsterW(m) - 2.0f) / TILE_SIZE);
-    int digTY  = (int)floorf((myBottom + 1.0f)              / TILE_SIZE);
+    int digTY  = (int)floorf((myBottom + 1.0f)                / TILE_SIZE);
     if (digTY < 0 || digTY >= WORLD_H) return;
     for (int tx = digTX0; tx <= digTX1; tx++) {
         if (!WorldInBounds(tx, digTY)) continue;
@@ -266,7 +260,7 @@ static void TryDigDown(Monster *m, World *w, Vector2 pCenter, float dt) {
                 int below = digTY + 1;
                 if (below < WORLD_H && TileBreakable(w->tiles[below][tx].type))
                     w->tiles[below][tx].type = TILE_AIR;
-                m->breakTimer = 0.0f;
+                m->breakTimer    = 0.0f;
                 m->breakCooldown = MONSTER_BREAK_COOLDOWN;
                 m->breakTX = -1; m->breakTY = -1;
                 m->retargetTimer = PATH_RETARGET;
@@ -283,8 +277,8 @@ static void UpdateSpider(Monster *m, const World *w,
     float dx = pCenter.x - cx;
     float dy = pCenter.y - cy;
 
-    int txL = (int)floorf((m->pos.x - 1.0f) / TILE_SIZE);
-    int txR = (int)floorf((m->pos.x + SPIDER_W + 0.5f) / TILE_SIZE);
+    int txL = (int)floorf((m->pos.x - 1.0f)              / TILE_SIZE);
+    int txR = (int)floorf((m->pos.x + SPIDER_W + 0.5f)   / TILE_SIZE);
     int tyM = (int)floorf(cy / TILE_SIZE);
     bool wallL = WorldIsSolid(w, txL, tyM);
     bool wallR = WorldIsSolid(w, txR, tyM);
@@ -310,7 +304,7 @@ static void UpdateSpider(Monster *m, const World *w,
 }
 
 void MonstersUpdate(Monsters *ms, Player *p, World *w,
-                    Particles *ps, float dt) {
+                    Particles *ps, float defenceMult, float dt) {
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
 
@@ -327,7 +321,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             Rectangle mr = MonsterRect(m);
             Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
             if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
-                p->hp     -= MonsterDamage(m);
+                int dmg = (int)(MonsterDamage(m) * defenceMult);
+                p->hp     -= dmg;
                 p->iframes = PLAYER_IFRAMES;
                 ParticlesSpawnBlood(ps, pCenter, 6);
                 if (p->hp < 0) p->hp = 0;
@@ -344,11 +339,11 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         int mtx = (int)floorf(mCenter.x / TILE_SIZE);
         int mty = (int)floorf((m->pos.y + MonsterH(m) - 1.0f) / TILE_SIZE);
         int ptx = (int)floorf(pCenter.x / TILE_SIZE);
-        int pty = (int)floorf((p->pos.y + PLAYER_H - 1.0f)  / TILE_SIZE);
+        int pty = (int)floorf((p->pos.y + PLAYER_H   - 1.0f) / TILE_SIZE);
 
-        int by = (int)floorf((m->pos.y + MonsterH(m) + 0.5f) / TILE_SIZE);
+        int by  = (int)floorf((m->pos.y + MonsterH(m) + 0.5f) / TILE_SIZE);
         bool onGround = false;
-        int bx0 = (int)floorf((m->pos.x + 1.0f) / TILE_SIZE);
+        int bx0 = (int)floorf((m->pos.x + 1.0f)               / TILE_SIZE);
         int bx1 = (int)floorf((m->pos.x + MonsterW(m) - 1.0f) / TILE_SIZE);
         for (int tx = bx0; tx <= bx1; tx++)
             if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
@@ -416,7 +411,7 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                         ParticlesSpawnDust(ps,
                             (Vector2){ m->breakTX * TILE_SIZE + TILE_SIZE * 0.5f,
                                        m->breakTY * TILE_SIZE + TILE_SIZE * 0.5f }, 6);
-                        m->breakTimer = 0.0f;
+                        m->breakTimer    = 0.0f;
                         m->breakCooldown = MONSTER_BREAK_COOLDOWN;
                         m->breakTX = -1; m->breakTY = -1;
                         m->retargetTimer = PATH_RETARGET;
@@ -440,7 +435,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         Rectangle mr = MonsterRect(m);
         Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
         if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
-            p->hp     -= MonsterDamage(m);
+            int dmg = (int)(MonsterDamage(m) * defenceMult);
+            p->hp     -= dmg;
             p->iframes = PLAYER_IFRAMES;
             ParticlesSpawnBlood(ps, pCenter, 6);
             if (p->hp < 0) p->hp = 0;
@@ -481,7 +477,6 @@ void MonstersDraw(const Monsters *ms) {
 
         DrawRectangle((int)m->pos.x, (int)m->pos.y, mw, mh, body);
 
-        /* spider legs */
         if (m->kind == MONSTER_TYPE_SPIDER) {
             Color leg = { 80, 30, 100, 255 };
             for (int l = 0; l < 4; l++) {

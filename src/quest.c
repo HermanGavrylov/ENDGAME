@@ -10,6 +10,10 @@ void QuestInit(QuestLog *ql) {
     ql->quests[2] = (Quest){ .title = "Light the Night",.desc = "Place at least 1 torch",        .done = false };
     ql->quests[3] = (Quest){ .title = "Go Underground", .desc = "Dig down 10 tiles from surface",.done = false };
     ql->count = 4;
+
+    memset(ql->wasDone,   0, sizeof(ql->wasDone));
+    ql->notifText[0] = '\0';
+    ql->notifTimer   = 0.0f;
 }
 
 void QuestUpdate(QuestLog *ql, const Player *p, const Inventory *inv,
@@ -56,6 +60,19 @@ void QuestUpdate(QuestLog *ql, const Player *p, const Inventory *inv,
         if (ql->progress[i] > 1.0f) ql->progress[i] = 1.0f;
         if (ql->progress[i] < 0.0f) ql->progress[i] = 0.0f;
     }
+
+    /* ── detect newly completed quests and trigger banner ── */
+    for (int i = 0; i < ql->count; i++) {
+        if (ql->quests[i].done && !ql->wasDone[i]) {
+            snprintf(ql->notifText, sizeof(ql->notifText),
+                     "Task complete: %s", ql->quests[i].title);
+            ql->notifTimer = 3.0f;
+        }
+        ql->wasDone[i] = ql->quests[i].done;
+    }
+
+    if (ql->notifTimer > 0.0f)
+        ql->notifTimer -= dt;
 }
 
 void QuestDraw(const QuestLog *ql) {
@@ -127,4 +144,24 @@ void QuestDraw(const QuestLog *ql) {
     int hw = MeasureText(hint, 11);
     DrawText(hint, panelX + panelW / 2 - hw / 2, panelY + panelH - 18, 11,
              (Color){ 120, 120, 120, a });
+}
+
+void QuestDrawNotif(const QuestLog *ql) {
+    if (ql->notifTimer <= 0.0f) return;
+
+    float t  = ql->notifTimer < 1.0f ? ql->notifTimer : 1.0f;
+    unsigned char na = (unsigned char)(t * 255);
+
+    int fontSize = 16;
+    int textW    = MeasureText(ql->notifText, fontSize);
+    int padH = 10, padV = 8;
+    int bw = textW + padH * 2;
+    int bh = fontSize + padV * 2;
+    int bx = SCREEN_W / 2 - bw / 2;
+    int by = SCREEN_H - 90;
+
+    DrawRectangle(bx + 2, by + 2, bw, bh, (Color){ 0, 0, 0, (unsigned char)(na * 0.5f) });
+    DrawRectangle(bx, by, bw, bh, (Color){ 15, 50, 15, na });
+    DrawRectangleLines(bx, by, bw, bh, (Color){ 70, 210, 70, na });
+    DrawText(ql->notifText, bx + padH, by + padV, fontSize, (Color){ 130, 255, 130, na });
 }
