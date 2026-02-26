@@ -67,8 +67,8 @@
 #define STACK_MAX        999
 #define DRAG_NONE        -1
 
-#define DAY_DURATION     1.0f
-#define NIGHT_DURATION   1.0f
+#define DAY_DURATION     150.0f
+#define NIGHT_DURATION   150.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
