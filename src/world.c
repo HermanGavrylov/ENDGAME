@@ -148,8 +148,20 @@ static void GenerateLakes(World *w, const int *surface) {
     int x = 20 + rand() % 30;
     while (x < WORLD_W - 20) {
         float n = Normalize01(Noise2D(x * 0.03f, 99.0f));
-        if (n > 0.55f)
-            PlaceLake(w, x, surface[x]);
+        if (n > 0.55f) {
+            int halfW = LAKE_MIN_WIDTH / 2 + rand() % ((LAKE_MAX_WIDTH - LAKE_MIN_WIDTH) / 2 + 1);
+            int left  = x - halfW;
+            int right = x + halfW;
+
+            bool canPlace = true;
+            for (int i = left; i <= right; i++) {
+                if (i < 0 || i >= WORLD_W) { canPlace = false; break; }
+                if (surface[i] > surface[x]) { canPlace = false; break; }
+            }
+
+            if (canPlace)
+                PlaceLake(w, x, surface[x]);
+        }
         x += 30 + rand() % 40;
     }
 }

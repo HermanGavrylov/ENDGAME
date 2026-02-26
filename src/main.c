@@ -51,6 +51,9 @@ int main(void) {
     MobsLoadTextures();
     Texture2D bgTexture = LoadTexture("resource/Background.png");
 
+    Scoreboard scoreboard;
+    ScoreboardLoad(&scoreboard);
+
     GameState gs = {0};
     gs.selectedChar = CHAR_WARRIOR;
     WorldGenerate(&gs.world);
@@ -134,9 +137,7 @@ int main(void) {
                     bgTexture,
                     (Rectangle){ 0, 0, bgTexture.width, bgTexture.height },
                     (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
-                    (Vector2){ 0, 0 },
-                    0.0f,
-                    WHITE
+                    (Vector2){ 0, 0 }, 0.0f, WHITE
                 );
                 BeginMode2D(gs.camera);
                     WorldDraw(&gs.world, &gs.camera);
@@ -167,9 +168,7 @@ int main(void) {
                     bgTexture,
                     (Rectangle){ 0, 0, bgTexture.width, bgTexture.height },
                     (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
-                    (Vector2){ 0, 0 },
-                    0.0f,
-                    WHITE
+                    (Vector2){ 0, 0 }, 0.0f, WHITE
                 );
                 BeginMode2D(gs.camera);
                     WorldDraw(&gs.world, &gs.camera);
@@ -182,14 +181,20 @@ int main(void) {
                 DrawGameOver(&currentState, &gs);
                 break;
 
+            case STATE_SCOREBOARD:
+                ScoreboardDraw(&scoreboard, (int*)&currentState, STATE_MENU);
+                break;
+
             default: break;
         }
 
         EndDrawing();
 
         if (needOutro) {
+            ScoreboardAdd(&scoreboard, gPlayerName, gs.player.kills);
             OutroRun();
-            needOutro = false;
+            needOutro    = false;
+            currentState = STATE_SCOREBOARD;
         }
     }
 

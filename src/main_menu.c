@@ -1,8 +1,11 @@
 #include "header.h"
+#include "settings.h"
 #include "menu.h"
 
+char gPlayerName[PLAYER_NAME_LEN] = "Player";
+
 static Music menuMusic;
-static bool musicLoaded = false;
+static bool  musicLoaded = false;
 
 void UpdateMenuAudio(void) {
     if (!musicLoaded) {
@@ -15,10 +18,9 @@ void UpdateMenuAudio(void) {
 
 static bool DrawButton(Rectangle rect, const char *text, Color hoverTint) {
     static Sound clickSnd;
-    static bool soundLoaded = false;
-
+    static bool  soundLoaded = false;
     if (!soundLoaded) {
-        clickSnd = LoadSound("resource/sound/button.mp3");
+        clickSnd    = LoadSound("resource/sound/button.mp3");
         soundLoaded = true;
     }
 
@@ -51,7 +53,7 @@ static bool DrawButton(Rectangle rect, const char *text, Color hoverTint) {
 }
 
 void DrawMainMenu(MenuSystemState *currentState) {
-    UpdateMenuAudio(); 
+    UpdateMenuAudio();
 
     float sw = (float)GetScreenWidth();
     float sh = (float)GetScreenHeight();
@@ -59,7 +61,7 @@ void DrawMainMenu(MenuSystemState *currentState) {
     static Texture2D menuBg;
     static bool      texLoaded = false;
     if (!texLoaded) {
-        menuBg = LoadTexture("resource/images/background_image.jpg");
+        menuBg    = LoadTexture("resource/images/background_image.jpg");
         texLoaded = true;
     }
 
@@ -106,20 +108,21 @@ void DrawMainMenu(MenuSystemState *currentState) {
     int hw = MeasureText(hint, 11);
     DrawText(hint, sw / 2 - hw / 2, py + panelH - 18, 11, (Color){ 120, 120, 120, 255 });
 
-    if (*currentState == STATE_GAMEPLAY || *currentState == STATE_EXIT) {
+    if (*currentState == STATE_GAMEPLAY || *currentState == STATE_EXIT)
         StopMusicStream(menuMusic);
-    }
 }
 
 void DrawCharSelect(MenuSystemState *currentState, CharClass *selected) {
-    UpdateMenuAudio(); 
-    
+    UpdateMenuAudio();
+
     static Sound selectSnd;
-    static bool selectSndLoaded = false;
+    static bool  selectSndLoaded = false;
     if (!selectSndLoaded) {
-        selectSnd = LoadSound("resource/sound/button.mp3");
-        selectSndLoaded = true;
+        selectSnd        = LoadSound("resource/sound/button.mp3");
+        selectSndLoaded  = true;
     }
+
+    static bool nameActive = false;
 
     float sw = (float)GetScreenWidth();
     float sh = (float)GetScreenHeight();
@@ -169,18 +172,21 @@ void DrawCharSelect(MenuSystemState *currentState, CharClass *selected) {
         } else {
             DrawRectangle(ax, ay, avatarSz, avatarSz, cd.tint);
         }
-        DrawRectangleLines(ax, ay, avatarSz, avatarSz, sel ? cd.tint : (Color){ 80, 75, 65, 180 });
+        DrawRectangleLines(ax, ay, avatarSz, avatarSz,
+                           sel ? cd.tint : (Color){ 80, 75, 65, 180 });
 
         int nw = MeasureText(cd.name, 17);
         DrawText(cd.name, cx + cardW / 2 - nw / 2, cardY + 76, 17, cd.tint);
 
         int dw = MeasureText(cd.desc, 11);
-        DrawText(cd.desc, cx + cardW / 2 - dw / 2, cardY + 102, 11, (Color){ 195, 190, 175, 255 });
+        DrawText(cd.desc, cx + cardW / 2 - dw / 2, cardY + 102, 11,
+                 (Color){ 195, 190, 175, 255 });
 
         if (sel) {
             const char *lbl = "[ SELECTED ]";
             int lw = MeasureText(lbl, 12);
-            DrawText(lbl, cx + cardW / 2 - lw / 2, cardY + cardH - 24, 12, (Color){ 100, 245, 100, 255 });
+            DrawText(lbl, cx + cardW / 2 - lw / 2, cardY + cardH - 24, 12,
+                     (Color){ 100, 245, 100, 255 });
         }
 
         if (hov && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -193,14 +199,62 @@ void DrawCharSelect(MenuSystemState *currentState, CharClass *selected) {
 
     int btnW = 200, btnH = 44;
     int btnX = (int)(sw / 2 - btnW / 2);
-    int btnY = cardY + cardH + 36;
+    int btnY = cardY + cardH + 80;
 
-    if (DrawButton((Rectangle){ (float)btnX, (float)btnY, (float)btnW, (float)btnH }, "START GAME", (Color){ 120, 220, 120, 255 })) {
+    int fieldW = 260, fieldH = 36;
+    int fieldX = (int)(sw / 2 - fieldW / 2);
+    int fieldY = btnY - 54;
+
+    const char *nlabel = "Your name:";
+    int nlw = MeasureText(nlabel, 12);
+    DrawText(nlabel, fieldX + fieldW / 2 - nlw / 2, fieldY - 18, 12,
+             (Color){ 180, 170, 140, 255 });
+
+    Rectangle fieldR = { (float)fieldX, (float)fieldY, (float)fieldW, (float)fieldH };
+    bool fieldHov = CheckCollisionPointRec(GetMousePosition(), fieldR);
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+        nameActive = fieldHov;
+
+    Color fieldBorder = nameActive ? (Color){ 255, 220, 120, 255 }
+                      : fieldHov   ? (Color){ 140, 130, 100, 255 }
+                                   : (Color){ 70, 65, 55, 255 };
+    DrawRectangleRec(fieldR, (Color){ 20, 20, 30, 200 });
+    DrawRectangleLinesEx(fieldR, 1, fieldBorder);
+
+    if (nameActive) {
+        int key = GetCharPressed();
+        while (key > 0) {
+            int len = strlen(gPlayerName);
+            if (key >= 32 && key <= 125 && len < PLAYER_NAME_LEN - 1) {
+                gPlayerName[len]     = (char)key;
+                gPlayerName[len + 1] = '\0';
+            }
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE) && strlen(gPlayerName) > 0)
+            gPlayerName[strlen(gPlayerName) - 1] = '\0';
+    }
+
+    int nameW = MeasureText(gPlayerName, 14);
+    DrawText(gPlayerName, fieldX + fieldW / 2 - nameW / 2,
+             fieldY + fieldH / 2 - 7, 14, (Color){ 230, 220, 200, 255 });
+
+    if (nameActive && ((int)(GetTime() * 2) % 2 == 0)) {
+        int cx2 = fieldX + fieldW / 2 + nameW / 2 + 2;
+        DrawLine(cx2, fieldY + 8, cx2, fieldY + fieldH - 8,
+                 (Color){ 255, 220, 120, 255 });
+    }
+
+    if (DrawButton((Rectangle){ (float)btnX, (float)btnY, (float)btnW, (float)btnH },
+                   "START GAME", (Color){ 120, 220, 120, 255 })) {
+        if (strlen(gPlayerName) == 0)
+            strncpy(gPlayerName, "Player", PLAYER_NAME_LEN - 1);
         StopMusicStream(menuMusic);
         *currentState = STATE_GAMEPLAY;
     }
 
-    if (DrawButton((Rectangle){ (float)btnX, (float)btnY + 54, (float)btnW, (float)btnH }, "BACK", (Color){ 220, 80, 80, 255 }))
+    if (DrawButton((Rectangle){ (float)btnX, (float)btnY + 54, (float)btnW, (float)btnH },
+                   "BACK", (Color){ 220, 80, 80, 255 }))
         *currentState = STATE_MENU;
 }
 
@@ -229,7 +283,8 @@ void DrawGameOver(MenuSystemState *currentState, GameState *gs) {
     int btnW = 260, btnH = 45;
     int btnX = (int)(sw / 2 - btnW / 2);
 
-    if (DrawButton((Rectangle){ (float)btnX, (float)py + 105, (float)btnW, (float)btnH }, "PLAY AGAIN", (Color){ 120, 220, 120, 255 })) {
+    if (DrawButton((Rectangle){ (float)btnX, (float)py + 105, (float)btnW, (float)btnH },
+                   "PLAY AGAIN", (Color){ 120, 220, 120, 255 })) {
         CharDef cd = GetCharDef(gs->selectedChar);
         WorldGenerate(&gs->world);
         PlayerInit(&gs->player, &gs->world, gs->selectedChar);
@@ -249,6 +304,7 @@ void DrawGameOver(MenuSystemState *currentState, GameState *gs) {
         *currentState = STATE_GAMEPLAY;
     }
 
-    if (DrawButton((Rectangle){ (float)btnX, (float)py + 160, (float)btnW, (float)btnH }, "MAIN MENU", (Color){ 255, 220, 120, 255 }))
+    if (DrawButton((Rectangle){ (float)btnX, (float)py + 160, (float)btnW, (float)btnH },
+                   "MAIN MENU", (Color){ 255, 220, 120, 255 }))
         *currentState = STATE_MENU;
 }

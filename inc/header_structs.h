@@ -68,8 +68,8 @@
 #define STACK_MAX        999
 #define DRAG_NONE        -1
 
-#define DAY_DURATION     150.0f
-#define NIGHT_DURATION   150.0f
+#define DAY_DURATION     30.0f
+#define NIGHT_DURATION   1.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
@@ -140,6 +140,22 @@
 #define RABBIT_FLEE_RANGE 100.0f
 #define RABBIT_MEAT_DROP  1
 #define RABBIT_JUMP_INTERVAL 1.2f
+
+#define SCORE_MAX_ENTRIES  5
+#define SCORE_MULTIPLIER   100
+#define SCORE_NAME_LEN     32
+#define SCORE_FILE         "scoreboard.dat"
+
+typedef struct {
+    char  name[SCORE_NAME_LEN];
+    int   score;
+    int   kills;
+} ScoreEntry;
+
+typedef struct {
+    ScoreEntry entries[SCORE_MAX_ENTRIES];
+    int        count;
+} Scoreboard;
 
 typedef enum {
     CHAR_WARRIOR = 0,
