@@ -1,8 +1,5 @@
 #include "header.h"
 
-#define SLOT_SIZE   46
-#define SLOT_PAD    4
-#define HOTBAR_Y    (SCREEN_H - SLOT_SIZE - 10)
 
 static int HotbarStartX(void) {
     return (SCREEN_W - (HOTBAR_SIZE * (SLOT_SIZE + SLOT_PAD) - SLOT_PAD)) / 2;
@@ -248,7 +245,7 @@ void InvDraw(const Inventory *inv) {
     if (inv->open) DrawBag(inv);
     DrawDraggedItem(inv);
 
-    const char *controls = "WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place | F - eat";
+    const char *controls = "WASD - move | Space - jump | E - inventory | LMB - mine | RMB - place | F - consume";
 
     int cx = 10;
     int cy = 10;

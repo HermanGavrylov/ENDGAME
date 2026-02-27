@@ -1,10 +1,5 @@
 #include "header.h"
-#include "settings.h"
-#include "menu.h"
-#include <stdio.h>
 
-// Extern declaration to access the audio update from menu.c
-// If you put UpdateMenuAudio in menu.h, you don't need the 'extern' line.
 extern void UpdateMenuAudio(void); 
 
 void SaveSettings(GameSettings settings) {

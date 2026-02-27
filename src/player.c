@@ -137,10 +137,6 @@ static void DrawHeldItem(const Player *p, const Inventory *inv) {
     float cy = p->pos.y + PLAYER_H * 0.4f;
     TileType held = inv->hotbar[inv->activeSlot].type;
 
-    if (held == TILE_TORCH) {
-        TorchDrawInHand(cx, cy, p->facingLeft);
-        return;
-    }
     if (held == TILE_SWORD && p->attacking) {
         float progress = 1.0f - (p->swordTimer / SWORD_COOLDOWN);
         float angle = p->facingLeft
@@ -151,6 +147,7 @@ static void DrawHeldItem(const Player *p, const Inventory *inv) {
 }
 
 void PlayerDraw(const Player *p, const Inventory *inv, Color tint, CharClass cls) {
+    (void)inv;
     bool flash = (p->iframes > 0.0f) && ((int)(p->iframes * 10) % 2 == 0);
     if (!flash) PlayerSpriteDrawClass(p->pos.x, p->pos.y, p->facingLeft, tint, cls);
     DrawHeldItem(p, inv);

@@ -1,6 +1,4 @@
 #include "header.h"
-#include "settings.h"
-#include "menu.h"
 
 char gPlayerName[PLAYER_NAME_LEN] = "Player";
 

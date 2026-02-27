@@ -8,10 +8,10 @@ static bool      gPlayerLoaded[CHAR_COUNT];
 
 static const char *PlayerTexPath(CharClass cls) {
     switch (cls) {
-        case CHAR_WARRIOR: return "resource/Dude_Monster.png";
-        case CHAR_SCOUT:   return "resource/Owlet_Monster.png";
-        case CHAR_TANK:    return "resource/Pink_Monster.png";
-        default:           return "resource/Dude_Monster.png";
+        case CHAR_WARRIOR: return "resource/warrior.png";
+        case CHAR_SCOUT:   return "resource/scout.png";
+        case CHAR_TANK:    return "resource/tank.png";
+        default:           return "resource/warrior.png";
     }
 }
 
@@ -19,17 +19,19 @@ static Texture2D gSwordTex;
 static bool      gSwordLoaded = false;
 static Texture2D gTorchTex;
 static bool      gTorchLoaded = false;
+static Texture2D gLifePotTex;
+static bool      gLifePotLoaded = false;
 
 static const char *TilePath(TileType t) {
     switch (t) {
-        case TILE_GRASS:  return "resource/tile_0001.png";
-        case TILE_DIRT:   return "resource/tile_0000.png";
-        case TILE_STONE:  return "resource/tile_0024.png";
-        case TILE_COAL:   return "resources/tile_0003.png";
-        case TILE_IRON:   return "resource/tile_0012.png";
-        case TILE_GOLD:   return "resources/tile_0005.png";
-        case TILE_WOOD:   return "resources/tile_0006.png";
-        case TILE_LEAVES: return "resources/tile_0007.png";
+        case TILE_GRASS:  return "resource/grass.png";
+        case TILE_DIRT:   return "resource/dirt.png";
+        case TILE_STONE:  return "resource/rock.png";
+        case TILE_COAL:   return "resource/coal.png";
+        case TILE_IRON:   return "resource/iron.png";
+        case TILE_GOLD:   return "resource/gold.png";
+        case TILE_WOOD:   return "resource/trunk.png";
+        case TILE_LEAVES: return "resource/leaves.png";
         case TILE_WATER:  return "resource/tile_0037.png";
         case TILE_MEAT:   return "resource/meat.png";
         default:          return NULL;
@@ -64,6 +66,10 @@ void TexturesLoad(void) {
         gTorchTex    = LoadTexture("resource/torch.png");
         gTorchLoaded = true;
     }
+    if (FileExists("resource/LifePot.png")) {
+        gLifePotTex    = LoadTexture("resource/LifePot.png");
+        gLifePotLoaded = true;
+    }
 }
 
 void TexturesUnload(void) {
@@ -71,8 +77,9 @@ void TexturesUnload(void) {
         if (gTileLoaded[i]) UnloadTexture(gTileTex[i]);
     for (int c = 0; c < CHAR_COUNT; c++)
         if (gPlayerLoaded[c]) UnloadTexture(gPlayerTex[c]);
-    if (gSwordLoaded) UnloadTexture(gSwordTex);
-    if (gTorchLoaded) UnloadTexture(gTorchTex);
+    if (gSwordLoaded)   UnloadTexture(gSwordTex);
+    if (gTorchLoaded)   UnloadTexture(gTorchTex);
+    if (gLifePotLoaded) UnloadTexture(gLifePotTex);
 }
 
 void TileDrawScaled(TileType type, int px, int py, int size) {
@@ -96,6 +103,17 @@ void TileDrawScaled(TileType type, int px, int py, int size) {
             DrawTexturePro(gTorchTex, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
         } else {
             DrawRectangle(px, py, size, size, TileColor(TILE_TORCH));
+        }
+        return;
+    }
+
+    if (type == TILE_LIFEPOT) {
+        if (gLifePotLoaded) {
+            Rectangle src = { 0, 0, (float)gLifePotTex.width, (float)gLifePotTex.height };
+            Rectangle dst = { (float)px, (float)py, (float)size, (float)size };
+            DrawTexturePro(gLifePotTex, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
+        } else {
+            DrawRectangle(px, py, size, size, TileColor(TILE_LIFEPOT));
         }
         return;
     }
@@ -137,6 +155,17 @@ void TileDraw(TileType type, int px, int py) {
         return;
     }
 
+    if (type == TILE_LIFEPOT) {
+        if (gLifePotLoaded) {
+            Rectangle src = { 0, 0, (float)gLifePotTex.width, (float)gLifePotTex.height };
+            Rectangle dst = { (float)px, (float)py, (float)TILE_SIZE, (float)TILE_SIZE };
+            DrawTexturePro(gLifePotTex, src, dst, (Vector2){0, 0}, 0.0f, WHITE);
+        } else {
+            DrawRectangle(px, py, TILE_SIZE, TILE_SIZE, TileColor(TILE_LIFEPOT));
+        }
+        return;
+    }
+
     if (gTileLoaded[type]) {
         DrawTextureEx(gTileTex[type], (Vector2){ (float)px, (float)py }, 0.0f, 1.0f, WHITE);
     } else {
@@ -153,18 +182,25 @@ void PlayerSpriteDraw(float px, float py, bool facingLeft, Color tint) {
 
 void PlayerSpriteDrawClass(float px, float py, bool facingLeft,
                             Color tint, CharClass cls) {
-    if (!gPlayerLoaded[cls]) {
-        DrawRectangle((int)px, (int)py, PLAYER_W, PLAYER_H, tint);
-        DrawRectangle((int)px + 1, (int)py, PLAYER_W - 2, PLAYER_W - 2,
-                      (Color){ 255, 210, 160, 255 });
-        return;
-    }
+    if (!gPlayerLoaded[cls]) { return; }
+
     float tw = (float)gPlayerTex[cls].width;
     float th = (float)gPlayerTex[cls].height;
-    float offsetX = px - (tw - PLAYER_W) * 0.5f;
-    Rectangle src = { facingLeft ? tw : 0, 0,
-                      facingLeft ? -tw : tw, th };
-    Rectangle dst = { offsetX, py, tw, th };
+
+    float scale = (float)PLAYER_H / th;
+    float drawW = tw * scale;
+    float drawH = th * scale;
+
+    float drawX = px + (PLAYER_W - drawW) * 0.5f;
+    float drawY = py;
+
+    Rectangle src = {
+        facingLeft ? tw : 0,
+        0,
+        facingLeft ? -tw : tw,
+        th
+    };
+    Rectangle dst = { drawX, drawY, drawW, drawH };
     DrawTexturePro(gPlayerTex[cls], src, dst, (Vector2){0, 0}, 0.0f, tint);
 }
 

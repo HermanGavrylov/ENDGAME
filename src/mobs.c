@@ -155,6 +155,8 @@ void MobsUpdate(Mobs *mobs, Player *p, const World *w,
             int drops = (m->kind == MOB_PIG) ? PIG_MEAT_DROP : RABBIT_MEAT_DROP;
             for (int d = 0; d < drops; d++)
                 InvAddItem(inv, TILE_MEAT);
+            if (rand() % 100 < LIFEPOT_DROP_MOB)
+            InvAddItem(inv, TILE_LIFEPOT);
             ParticlesSpawnBlood(ps, (Vector2){ cx, cy }, 5);
         }
     }

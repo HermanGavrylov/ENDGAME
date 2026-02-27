@@ -1,5 +1,4 @@
 #include "header.h"
-#include "menu.h"
 
 static bool DrawButton(Rectangle rect, const char* text, Color hoverTint) {
     Vector2 mouse = GetMousePosition();

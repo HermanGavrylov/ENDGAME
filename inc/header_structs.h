@@ -68,8 +68,12 @@
 #define STACK_MAX        999
 #define DRAG_NONE        -1
 
-#define DAY_DURATION     30.0f
-#define NIGHT_DURATION   1.0f
+#define SLOT_SIZE   46
+#define SLOT_PAD    4
+#define HOTBAR_Y    (SCREEN_H - SLOT_SIZE - 10)
+
+#define DAY_DURATION     150.0f
+#define NIGHT_DURATION   150.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
@@ -126,15 +130,15 @@
 #define MAX_MOBS         32
 #define MOB_IFRAMES      0.4f
 
-#define PIG_W            14
-#define PIG_H            12
+#define PIG_W            20
+#define PIG_H            18
 #define PIG_HP           15
 #define PIG_SPEED        45.0f
 #define PIG_FLEE_RANGE   80.0f
 #define PIG_MEAT_DROP    2
 
-#define RABBIT_W         10
-#define RABBIT_H         10
+#define RABBIT_W         20
+#define RABBIT_H         18
 #define RABBIT_HP        6
 #define RABBIT_SPEED     90.0f
 #define RABBIT_FLEE_RANGE 100.0f
@@ -145,6 +149,12 @@
 #define SCORE_MULTIPLIER   100
 #define SCORE_NAME_LEN     32
 #define SCORE_FILE         "scoreboard.dat"
+
+#define PLAYER_NAME_LEN 32
+
+#define LIFEPOT_HEAL       30        
+#define LIFEPOT_DROP_MONSTER 40      
+#define LIFEPOT_DROP_MOB     10     
 
 typedef struct {
     char  name[SCORE_NAME_LEN];
@@ -196,7 +206,6 @@ static inline CharDef GetCharDef(CharClass cls) {
                 WHITE, 20, 1.0f, 1.25f, 1.0f, 5 };
     }
 }
-
 typedef enum {
     TILE_AIR    = 0,
     TILE_GRASS,
@@ -211,6 +220,7 @@ typedef enum {
     TILE_TORCH,
     TILE_MEAT,
     TILE_SWORD,
+    TILE_LIFEPOT,  
     TILE_COUNT
 } TileType;
 
@@ -345,6 +355,20 @@ typedef struct {
     bool  finished;
 } DayNight;
 
+typedef struct GameSettings {
+    float volume;
+} GameSettings;
+
+typedef enum {
+    STATE_MENU,
+    STATE_CHARSELECT,
+    STATE_SETTINGS,
+    STATE_SCOREBOARD,
+    STATE_GAMEOVER,
+    STATE_GAMEPLAY,
+    STATE_EXIT
+} MenuSystemState;
+
 typedef struct {
     const char *title;
     const char *desc;
@@ -378,37 +402,39 @@ typedef struct {
 
 static inline Color TileColor(TileType t) {
     switch (t) {
-        case TILE_GRASS:  return (Color){  86, 169,  48, 255 };
-        case TILE_DIRT:   return (Color){ 139,  90,  43, 255 };
-        case TILE_STONE:  return (Color){ 128, 128, 128, 255 };
-        case TILE_COAL:   return (Color){  40,  40,  40, 255 };
-        case TILE_IRON:   return (Color){ 200, 160, 120, 255 };
-        case TILE_GOLD:   return (Color){ 255, 210,  30, 255 };
-        case TILE_WOOD:   return (Color){ 101,  67,  33, 255 };
-        case TILE_LEAVES: return (Color){  34, 139,  34, 255 };
-        case TILE_WATER:  return (Color){  64, 164, 223, 180 };
-        case TILE_TORCH:  return (Color){ 255, 200,  60, 255 };
-        case TILE_MEAT:   return (Color){ 200,  80,  80, 255 };
-        case TILE_SWORD:  return (Color){ 200, 210, 230, 255 };
-        default:          return (Color){   0,   0,   0,   0 };
+        case TILE_GRASS:   return (Color){  86, 169,  48, 255 };
+        case TILE_DIRT:    return (Color){ 139,  90,  43, 255 };
+        case TILE_STONE:   return (Color){ 128, 128, 128, 255 };
+        case TILE_COAL:    return (Color){  40,  40,  40, 255 };
+        case TILE_IRON:    return (Color){ 200, 160, 120, 255 };
+        case TILE_GOLD:    return (Color){ 255, 210,  30, 255 };
+        case TILE_WOOD:    return (Color){ 101,  67,  33, 255 };
+        case TILE_LEAVES:  return (Color){  34, 139,  34, 255 };
+        case TILE_WATER:   return (Color){  64, 164, 223, 180 };
+        case TILE_TORCH:   return (Color){ 255, 200,  60, 255 };
+        case TILE_MEAT:    return (Color){ 200,  80,  80, 255 };
+        case TILE_SWORD:   return (Color){ 200, 210, 230, 255 };
+        case TILE_LIFEPOT: return (Color){ 220,  60, 100, 255 };
+        default:           return (Color){   0,   0,   0,   0 };
     }
 }
 
 static inline const char *TileName(TileType t) {
     switch (t) {
-        case TILE_GRASS:  return "Grass";
-        case TILE_DIRT:   return "Dirt";
-        case TILE_STONE:  return "Stone";
-        case TILE_COAL:   return "Coal";
-        case TILE_IRON:   return "Iron";
-        case TILE_GOLD:   return "Gold";
-        case TILE_WOOD:   return "Wood";
-        case TILE_LEAVES: return "Leaves";
-        case TILE_WATER:  return "Water";
-        case TILE_TORCH:  return "Torch";
-        case TILE_MEAT:   return "Meat";
-        case TILE_SWORD:  return "Sword";
-        default:          return "Air";
+        case TILE_GRASS:   return "Grass";
+        case TILE_DIRT:    return "Dirt";
+        case TILE_STONE:   return "Stone";
+        case TILE_COAL:    return "Coal";
+        case TILE_IRON:    return "Iron";
+        case TILE_GOLD:    return "Gold";
+        case TILE_WOOD:    return "Wood";
+        case TILE_LEAVES:  return "Leaves";
+        case TILE_WATER:   return "Water";
+        case TILE_TORCH:   return "Torch";
+        case TILE_MEAT:    return "Meat";
+        case TILE_SWORD:   return "Sword";
+        case TILE_LIFEPOT: return "Life Potion";
+        default:           return "Air";
     }
 }
 

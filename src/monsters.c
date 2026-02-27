@@ -318,6 +318,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                 p->kills++;
                 if (rand() % 100 < FOOD_DROP_CHANCE)
                     InvAddItem(inv, TILE_MEAT);
+                if (rand() % 100 < LIFEPOT_DROP_MONSTER)
+                    InvAddItem(inv, TILE_LIFEPOT);
             }
             continue;
         }

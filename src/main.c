@@ -1,6 +1,4 @@
 #include "header.h"
-#include "settings.h"
-#include "menu.h"
 
 void CameraUpdate(Camera2D *cam, const Player *p) {
     cam->target = (Vector2){ p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };

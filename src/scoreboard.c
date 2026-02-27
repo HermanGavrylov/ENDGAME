@@ -1,5 +1,4 @@
 #include "header.h"
-#include "menu.h"
 
 void ScoreboardLoad(Scoreboard *sb) {
     sb->count = 0;
