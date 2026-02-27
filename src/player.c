@@ -20,6 +20,8 @@ void PlayerInit(Player *p, const World *w, CharClass cls) {
     p->swordTimer = 0.0f;
     p->attacking  = false;
     p->kills      = 0;
+    p->temperature    = TEMP_MAX;  
+    p->freezeDmgTimer = TEMP_FREEZE_TICK;
 }
 
 static Rectangle ResolveCollision(const World *w, Rectangle rect, Vector2 *vel) {

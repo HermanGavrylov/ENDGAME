@@ -47,6 +47,7 @@ int main(void) {
 
     TexturesLoad();
     MobsLoadTextures();
+    RainInit();
     Texture2D bgTexture = LoadTexture("resource/Background.png");
 
     Scoreboard scoreboard;
@@ -125,6 +126,8 @@ int main(void) {
                     InvHandleDrag(&gs.inv);
                     QuestUpdate(&gs.quests, &gs.player, &gs.inv, &gs.world, dt);
                     CameraUpdate(&gs.camera, &gs.player);
+                    RainUpdate(dt);
+                    TemperatureUpdate(&gs.player, &gs.world, &gs.inv, &gs.daynight, dt);
 
                     if (gs.player.hp <= 0)    currentState = STATE_GAMEOVER;
                     if (gs.daynight.finished) { currentState = STATE_MENU; needOutro = true; }
@@ -145,6 +148,8 @@ int main(void) {
                     MobsDraw(&gs.mobs);
                     PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
+
+                RainDraw();   // ← після EndMode2D, перед HUD
 
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 InvDraw(&gs.inv);
@@ -175,6 +180,7 @@ int main(void) {
                     MobsDraw(&gs.mobs);
                     PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
+                RainDraw();
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 DrawGameOver(&currentState, &gs);
                 break;

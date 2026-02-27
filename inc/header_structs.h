@@ -72,8 +72,14 @@
 #define SLOT_PAD    4
 #define HOTBAR_Y    (SCREEN_H - SLOT_SIZE - 10)
 
-#define DAY_DURATION     150.0f
-#define NIGHT_DURATION   150.0f
+#define RAIN_COUNT       300
+#define RAIN_SPEED_MIN   600.0f
+#define RAIN_SPEED_MAX   900.0f
+#define RAIN_LEN         10
+#define RAIN_WIND        80.0f   
+
+#define DAY_DURATION     15.0f
+#define NIGHT_DURATION   40.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
@@ -154,13 +160,30 @@
 
 #define LIFEPOT_HEAL       30        
 #define LIFEPOT_DROP_MONSTER 40      
-#define LIFEPOT_DROP_MOB     10     
+#define LIFEPOT_DROP_MOB     10   
+
+#define TEMP_MAX           37.0f     
+#define TEMP_MIN          -20.0f     
+#define TEMP_FREEZE_THRESHOLD 0.0f   
+#define TEMP_NIGHT_DRAIN   6.0f      
+#define TEMP_DAY_RESTORE   1.5f      
+#define TEMP_TORCH_RESTORE 12.0f     
+#define TEMP_TORCH_DIST    (TORCH_RADIUS * 1.2f)
+#define TEMP_FREEZE_DMG    4.0f      
+#define TEMP_FREEZE_TICK   1.0f  
 
 typedef struct {
     char  name[SCORE_NAME_LEN];
     int   score;
     int   kills;
 } ScoreEntry;
+
+typedef struct {
+    float x, y;
+    float speed;
+} RainDrop;
+
+static RainDrop gRain[RAIN_COUNT];
 
 typedef struct {
     ScoreEntry entries[SCORE_MAX_ENTRIES];
@@ -260,6 +283,8 @@ typedef struct {
     float   hungerDmgTimer;
     bool    attacking;
     int     kills;
+    float   temperature;    
+    float   freezeDmgTimer;
 } Player;
 
 typedef struct {
