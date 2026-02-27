@@ -1,9 +1,18 @@
 #include "header.h"
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 
 static Texture2D gPigTex;
 static Texture2D gRabbitTex;
 static bool      gPigLoaded    = false;
 static bool      gRabbitLoaded = false;
+
+static Sound sPigHurt;
+static Sound sPigIdle;
+static Sound sRabbitIdle;
+static bool  gPigSoundLoaded = false;
+static bool  gRabbitSoundLoaded = false;
 
 void MobsLoadTextures(void) {
     if (FileExists("resource/pig.png")) {
@@ -14,34 +23,48 @@ void MobsLoadTextures(void) {
         gRabbitTex    = LoadTexture("resource/rabbit.png");
         gRabbitLoaded = true;
     }
+
+    if (FileExists("resource/sound/pig.mp3")) {
+        sPigHurt = LoadSound("resource/sound/pig.mp3");
+        sPigIdle = LoadSound("resource/sound/pig.mp3");
+        gPigSoundLoaded = true;
+    }
+
+    if (FileExists("resource/sound/cow.mp3")) {
+        sRabbitIdle = LoadSound("resource/sound/cow.mp3");
+        gRabbitSoundLoaded = true;
+    }
 }
 
 void MobsUnloadTextures(void) {
     if (gPigLoaded)    UnloadTexture(gPigTex);
     if (gRabbitLoaded) UnloadTexture(gRabbitTex);
+
+    if (gPigSoundLoaded) {
+        UnloadSound(sPigHurt);
+        UnloadSound(sPigIdle);
+    }
+    
+    if (gRabbitSoundLoaded) {
+        UnloadSound(sRabbitIdle);
+    }
 }
 
 static bool TrySpawnMob(Mobs *mobs, const World *w, MobType kind) {
-
     if (mobs->count >= MAX_MOBS)
         return false;
 
     int tx = 10 + rand() % (WORLD_W - 20);
 
     for (int ty = 0; ty < WORLD_H - 1; ty++) {
-
         if (w->tiles[ty][tx].type == TILE_AIR &&
             w->tiles[ty + 1][tx].type == TILE_GRASS) {
 
             Mob *mob = &mobs->list[mobs->count];
-
             memset(mob, 0, sizeof(Mob));
-
-            mobs->count++; 
-
+            
             mob->kind      = kind;
-            mob->hp        = mob->maxHp =
-                (kind == MOB_PIG) ? PIG_HP : RABBIT_HP;
+            mob->hp        = mob->maxHp = (kind == MOB_PIG) ? PIG_HP : RABBIT_HP;
 
             mob->pos = (Vector2){
                 (float)(tx * TILE_SIZE),
@@ -51,11 +74,11 @@ static bool TrySpawnMob(Mobs *mobs, const World *w, MobType kind) {
             mob->alive       = true;
             mob->wanderTimer = (float)(rand() % 3);
             mob->jumpTimer   = RABBIT_JUMP_INTERVAL;
-
+            
+            mobs->count++; 
             return true;
         }
     }
-
     return false;
 }
 
@@ -82,10 +105,7 @@ static void ResolveMobCollision(const World *w, Mob *m) {
     for (int ty = top; ty <= bottom; ty++) {
         for (int tx = left; tx <= right; tx++) {
             if (!WorldIsSolid(w, tx, ty)) continue;
-            Rectangle tile = {
-                (float)(tx * TILE_SIZE), (float)(ty * TILE_SIZE),
-                (float)TILE_SIZE, (float)TILE_SIZE
-            };
+            Rectangle tile = { (float)(tx * TILE_SIZE), (float)(ty * TILE_SIZE), (float)TILE_SIZE, (float)TILE_SIZE };
             if (!CheckCollisionRecs(rect, tile)) continue;
             float oL = (rect.x + rect.width)  - tile.x;
             float oR = (tile.x + tile.width)   - rect.x;
@@ -126,15 +146,30 @@ void MobsUpdate(Mobs *mobs, Player *p, const World *w,
         Mob *m = &mobs->list[i];
         if (!m->alive) continue;
         if (m->iframes > 0.0f) m->iframes -= dt;
-
+        
         float fleeRange = (m->kind == MOB_RABBIT) ? RABBIT_FLEE_RANGE : PIG_FLEE_RANGE;
         float speed     = (m->kind == MOB_RABBIT) ? RABBIT_SPEED      : PIG_SPEED;
 
         float cx   = m->pos.x + MobW(m) * 0.5f;
         float cy   = m->pos.y + MobH(m) * 0.5f;
         float dx   = pCenter.x - cx;
-        float dist = fabsf(dx) + fabsf(pCenter.y - cy);
+        float dy   = pCenter.y - cy;
+        float dist = sqrtf(dx * dx + dy * dy);
 
+        if (m->kind == MOB_PIG && gPigSoundLoaded) {
+            if (dist < 100.0f && dist > 30.0f) {
+                if (!IsSoundPlaying(sPigIdle)) {
+                    PlaySound(sPigIdle);
+                }
+            }
+        }
+        if (m->kind == MOB_RABBIT && gRabbitSoundLoaded) {
+            if (dist < 100.0f && dist > 30.0f) {
+                if (!IsSoundPlaying(sRabbitIdle)) {
+                    PlaySound(sRabbitIdle);
+                }
+            }
+        }
         int by  = (int)floorf((m->pos.y + MobH(m) + 0.5f) / TILE_SIZE);
         int bx0 = (int)floorf((m->pos.x + 1.0f)            / TILE_SIZE);
         int bx1 = (int)floorf((m->pos.x + MobW(m) - 1.0f)  / TILE_SIZE);
@@ -174,7 +209,7 @@ void MobsUpdate(Mobs *mobs, Player *p, const World *w,
             for (int d = 0; d < drops; d++)
                 InvAddItem(inv, TILE_MEAT);
             if (rand() % 100 < LIFEPOT_DROP_MOB)
-            InvAddItem(inv, TILE_LIFEPOT);
+                InvAddItem(inv, TILE_LIFEPOT);
             ParticlesSpawnBlood(ps, (Vector2){ cx, cy }, 5);
         }
     }
@@ -207,12 +242,11 @@ void MobsAttack(Mobs *mobs, Player *p, Particles *ps,
         if (CheckCollisionRecs(hitbox, mr)) {
             m->hp     -= dmg;
             m->iframes = MOB_IFRAMES;
+
             float kbDir = (m->pos.x > cx) ? 1.0f : -1.0f;
             m->vel.x = kbDir * 100.0f;
             m->vel.y = -120.0f;
-            ParticlesSpawnBlood(ps,
-                (Vector2){ m->pos.x + MobW(m) * 0.5f,
-                           m->pos.y + MobH(m) * 0.5f }, 5);
+            ParticlesSpawnBlood(ps, (Vector2){ m->pos.x + MobW(m) * 0.5f, m->pos.y + MobH(m) * 0.5f }, 5);
         }
     }
 }
@@ -231,29 +265,23 @@ void MobsDraw(const Mobs *mobs) {
             if (gPigLoaded) {
                 float tw = (float)gPigTex.width;
                 float th = (float)gPigTex.height;
-                Rectangle src = { m->facingLeft ? tw : 0, 0,
-                                  m->facingLeft ? -tw : tw, th };
+                Rectangle src = { m->facingLeft ? tw : 0, 0, m->facingLeft ? -tw : tw, th };
                 Rectangle dst = { (float)px, (float)py, (float)mw, (float)mh };
                 DrawTexturePro(gPigTex, src, dst, (Vector2){0,0}, 0.0f, tint);
             } else {
-                DrawRectangle(px, py, mw, mh,
-                    flash ? WHITE : (Color){ 255, 180, 180, 255 });
-                DrawRectangle(px + (m->facingLeft ? 1 : mw-4), py+2, 3, 3,
-                    (Color){ 80, 40, 40, 255 });
+                DrawRectangle(px, py, mw, mh, flash ? WHITE : (Color){ 255, 180, 180, 255 });
+                DrawRectangle(px + (m->facingLeft ? 1 : mw-4), py+2, 3, 3, (Color){ 80, 40, 40, 255 });
             }
         } else {
             if (gRabbitLoaded) {
                 float tw = (float)gRabbitTex.width;
                 float th = (float)gRabbitTex.height;
-                Rectangle src = { m->facingLeft ? tw : 0, 0,
-                                  m->facingLeft ? -tw : tw, th };
+                Rectangle src = { m->facingLeft ? tw : 0, 0, m->facingLeft ? -tw : tw, th };
                 Rectangle dst = { (float)px, (float)py, (float)mw, (float)mh };
                 DrawTexturePro(gRabbitTex, src, dst, (Vector2){0,0}, 0.0f, tint);
             } else {
-                DrawRectangle(px, py, mw, mh,
-                    flash ? WHITE : (Color){ 230, 230, 220, 255 });
-                DrawRectangle(px + mw/2 - 1, py - 4, 2, 5,
-                    (Color){ 210, 210, 200, 255 });
+                DrawRectangle(px, py, mw, mh, flash ? WHITE : (Color){ 230, 230, 220, 255 });
+                DrawRectangle(px + mw/2 - 1, py - 4, 2, 5, (Color){ 210, 210, 200, 255 });
             }
         }
     }

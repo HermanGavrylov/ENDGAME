@@ -34,10 +34,14 @@ static void ResetGame(GameState *gs) {
 }
 
 int main(void) {
+
     InitWindow(SCREEN_W, SCREEN_H, "The Dark");
-    InitAudioDevice();
+    InitAudioDevice(); 
     SetTargetFPS(TARGET_FPS);
     SetExitKey(KEY_NULL);
+
+    Music bgMusic = LoadMusicStream("resource/sound/gameplay_background.mp3");
+    bgMusic.looping = true;
 
     MenuSystemState currentState  = STATE_MENU;
     MenuSystemState previousState = STATE_MENU;
@@ -45,8 +49,10 @@ int main(void) {
     bool needOutro = false;
     GameSettings settings = LoadSettings();
 
+    SetMasterVolume(settings.volume);
+
     TexturesLoad();
-    MobsLoadTextures();
+    MobsLoadTextures(); 
     RainInit();
     Texture2D bgTexture = LoadTexture("resource/Background.png");
 
@@ -71,13 +77,19 @@ int main(void) {
 
     while (!WindowShouldClose() && currentState != STATE_EXIT) {
 
+        if (currentState == STATE_GAMEPLAY || currentState == STATE_SETTINGS) {
+            if (!IsMusicStreamPlaying(bgMusic)) PlayMusicStream(bgMusic);
+            UpdateMusicStream(bgMusic);
+        } else {
+            if (IsMusicStreamPlaying(bgMusic)) PauseMusicStream(bgMusic);
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
 
         CharDef cd = GetCharDef(gs.selectedChar);
 
         switch (currentState) {
-
             case STATE_MENU:
                 DrawMainMenu(&currentState);
                 previousState = STATE_MENU;
@@ -202,6 +214,7 @@ int main(void) {
         }
     }
 
+    UnloadMusicStream(bgMusic);
     UnloadTexture(bgTexture);
     MobsUnloadTextures();
     TexturesUnload();
