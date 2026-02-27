@@ -149,7 +149,7 @@ int main(void) {
                     PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
                 EndMode2D();
 
-                RainDraw();   // ← після EndMode2D, перед HUD
+                RainDraw();   
 
                 LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 InvDraw(&gs.inv);
