@@ -167,16 +167,12 @@ static bool BFSWalkable(const World *w, int tx, int ty) {
 static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int gty) {
     int ox = ptx - BFS_W / 2;
     int oy = pty - BFS_H / 2;
-
-    /* усі великі буфери — static, не займають стек */
     static signed char prevX[BFS_H][BFS_W];
     static signed char prevY[BFS_H][BFS_W];
     static bool        visited[BFS_H][BFS_W];
     static BFSNode     queue[BFS_MAX];
     static BFSNode     raw[PATH_LEN * 2];
-
     memset(visited, 0, sizeof(visited));
-
     int head = 0, tail = 0;
     int sx = ptx - ox, sy = pty - oy;
     int ex = gtx - ox, ey = gty - oy;
@@ -315,56 +311,26 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
     
     if (!soundsLoaded) {
         spiderAttackSnd = LoadSound("resource/sound/spider.mp3");
-        zombieAttackSnd = LoadSound("resource/sound/zombie.wav");
+        zombieAttackSnd = LoadSound("resource/sound/zombie.mp3");
         soundsLoaded = true;
     }
 
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
+
     for (int i = 0; i < ms->count; i++) {
         Monster *m = &ms->list[i];
         if (!m->alive) continue;
-        if (m->iframes       > 0.0f) m->iframes       -= dt;
-        if (m->breakCooldown > 0.0f) m->breakCooldown  -= dt;
-        if (m->jumpCooldown  > 0.0f) m->jumpCooldown   -= dt;
-        m->retargetTimer += dt;
-        if (m->kind == MONSTER_TYPE_SPIDER) {
-            UpdateSpider(m, w, pCenter, dt);
-            Rectangle mr = MonsterRect(m);
-            Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
-            if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
-                
-                int dmg = (int)(MonsterDamage(m) * defenceMult);
-                p->hp     -= dmg;
-                p->iframes = PLAYER_IFRAMES;
-                ParticlesSpawnBlood(ps, pCenter, 6);
-                if (p->hp < 0) p->hp = 0;
-            }
-            if (m->hp <= 0) {
-                m->alive = false;
-                p->kills++;
-                if (rand() % 100 < FOOD_DROP_CHANCE)   InvAddItem(inv, TILE_MEAT);
-                if (rand() % 100 < LIFEPOT_DROP_MONSTER) InvAddItem(inv, TILE_LIFEPOT);
-            }
-            continue;
-        }
+
         Vector2 mCenter = { m->pos.x + MonsterW(m) * 0.5f,
                             m->pos.y + MonsterH(m) * 0.5f };
-        float dx   = pCenter.x - mCenter.x;
-        float dy   = pCenter.y - mCenter.y;
-        float dist = fabsf(dx) + fabsf(dy);
-        int mtx = (int)floorf(mCenter.x / TILE_SIZE);
-        int mty = (int)floorf((m->pos.y + MonsterH(m) - 1.0f) / TILE_SIZE);
-        int ptx = (int)floorf(pCenter.x / TILE_SIZE);
-        int pty = (int)floorf((p->pos.y + PLAYER_H   - 1.0f) / TILE_SIZE);
-        int by  = (int)floorf((m->pos.y + MonsterH(m) + 0.5f) / TILE_SIZE);
-        bool onGround = false;
-        int bx0 = (int)floorf((m->pos.x + 1.0f)               / TILE_SIZE);
-        int bx1 = (int)floorf((m->pos.x + MonsterW(m) - 1.0f) / TILE_SIZE);
-        for (int tx = bx0; tx <= bx1; tx++)
-            if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
         
-        if (dist < 350.0f) { 
+        float dx = pCenter.x - mCenter.x;
+        float dy = pCenter.y - mCenter.y;
+        float distSq = dx*dx + dy*dy;
+        float soundThreshold = 200.0f;
+
+        if (distSq < (soundThreshold * soundThreshold)) {
             if (m->kind == MONSTER_TYPE_SPIDER) {
                 if (!IsSoundPlaying(spiderAttackSnd)) PlaySound(spiderAttackSnd);
             } else {
@@ -372,93 +338,121 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             }
         }
 
-        if (m->retargetTimer >= PATH_RETARGET) {
-            m->retargetTimer = 0.0f;
-            BuildPath(w, m, mtx, mty, ptx, pty);
-        }
-        bool  hasPath = m->pathLen > 0 && m->pathStep < m->pathLen;
-        bool  digging = false;
-        float moveX   = 0.0f;
-        bool  goLeft  = dx < 0;
-        if (hasPath) {
-            Vector2 target = m->path[m->pathStep];
-            float tdx = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
-            float tdy = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
-            if (fabsf(tdx) + fabsf(tdy) < TILE_SIZE * 0.8f) {
-                m->pathStep++;
-                hasPath = m->pathStep < m->pathLen;
-            }
-            if (hasPath) {
-                target = m->path[m->pathStep];
-                tdx    = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
-                tdy    = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
-                goLeft = tdx < 0;
-                moveX  = goLeft ? -MonsterSpeed(m) : MonsterSpeed(m);
-                if (tdy < -TILE_SIZE * 0.5f && onGround &&
-                    m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
-                    m->vel.y        = JUMP_FORCE * 0.85f;
-                    m->jumpCooldown = JUMP_COOLDOWN_TIME;
-                }
+        if (m->iframes       > 0.0f) m->iframes       -= dt;
+        if (m->breakCooldown > 0.0f) m->breakCooldown  -= dt;
+        if (m->jumpCooldown  > 0.0f) m->jumpCooldown   -= dt;
+        m->retargetTimer += dt;
+
+        if (m->kind == MONSTER_TYPE_SPIDER) {
+            UpdateSpider(m, w, pCenter, dt);
+            Rectangle mr = MonsterRect(m);
+            Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
+            if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
+                int dmg = (int)(MonsterDamage(m) * defenceMult);
+                p->hp     -= dmg;
+                p->iframes = PLAYER_IFRAMES;
+                ParticlesSpawnBlood(ps, pCenter, 6);
+                if (p->hp < 0) p->hp = 0;
             }
         } else {
-            moveX = goLeft ? -MonsterSpeed(m) : MonsterSpeed(m);
-        }
-        int wallTX = -1, wallTY = -1;
-        int solidCount = onGround
-            ? WallProfileFromGround(w, m, goLeft, by, &wallTX, &wallTY) : 0;
-        if (solidCount > 0) {
-            if (CanJumpOver(w, wallTX, wallTY, solidCount)) {
-                if (onGround && m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
-                    m->vel.y        = JUMP_FORCE * 0.85f;
-                    m->jumpCooldown = JUMP_COOLDOWN_TIME;
+            int mtx = (int)floorf(mCenter.x / TILE_SIZE);
+            int mty = (int)floorf((m->pos.y + MonsterH(m) - 1.0f) / TILE_SIZE);
+            int ptx = (int)floorf(pCenter.x / TILE_SIZE);
+            int pty = (int)floorf((p->pos.y + PLAYER_H   - 1.0f) / TILE_SIZE);
+            int by  = (int)floorf((m->pos.y + MonsterH(m) + 0.5f) / TILE_SIZE);
+            bool onGround = false;
+            int bx0 = (int)floorf((m->pos.x + 1.0f)               / TILE_SIZE);
+            int bx1 = (int)floorf((m->pos.x + MonsterW(m) - 1.0f) / TILE_SIZE);
+            for (int tx = bx0; tx <= bx1; tx++)
+                if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
+
+            if (m->retargetTimer >= PATH_RETARGET) {
+                m->retargetTimer = 0.0f;
+                BuildPath(w, m, mtx, mty, ptx, pty);
+            }
+            bool  hasPath = m->pathLen > 0 && m->pathStep < m->pathLen;
+            bool  digging = false;
+            float moveX   = 0.0f;
+            bool  goLeft  = dx < 0;
+
+            if (hasPath) {
+                Vector2 target = m->path[m->pathStep];
+                float tdx = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
+                float tdy = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
+                if (fabsf(tdx) + fabsf(tdy) < TILE_SIZE * 0.8f) {
+                    m->pathStep++;
+                    hasPath = m->pathStep < m->pathLen;
                 }
-            } else if (dist < MONSTER_DIG_RANGE) {
-                digging = true;
-                if (wallTX != m->breakTX || wallTY != m->breakTY) {
-                    m->breakTX = wallTX; m->breakTY = wallTY; m->breakTimer = 0.0f;
+                if (hasPath) {
+                    target = m->path[m->pathStep];
+                    tdx    = (target.x + TILE_SIZE * 0.5f) - mCenter.x;
+                    tdy    = (target.y + TILE_SIZE * 0.5f) - mCenter.y;
+                    goLeft = tdx < 0;
+                    moveX  = goLeft ? -MonsterSpeed(m) : MonsterSpeed(m);
+                    if (tdy < -TILE_SIZE * 0.5f && onGround &&
+                        m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
+                        m->vel.y        = JUMP_FORCE * 0.85f;
+                        m->jumpCooldown = JUMP_COOLDOWN_TIME;
+                    }
                 }
-                if (m->breakCooldown <= 0.0f) {
-                    m->breakTimer += dt;
-                    if (m->breakTimer >= MonsterBreakTime(m)) {
-                        if (WorldInBounds(m->breakTX, m->breakTY) &&
-                            TileBreakable(w->tiles[m->breakTY][m->breakTX].type)) {
-                            w->tiles[m->breakTY][m->breakTX].type = TILE_AIR;
-                            int above = m->breakTY - 1;
-                            if (above >= 0 &&
-                                TileBreakable(w->tiles[above][m->breakTX].type))
-                                w->tiles[above][m->breakTX].type = TILE_AIR;
+            } else {
+                moveX = goLeft ? -MonsterSpeed(m) : MonsterSpeed(m);
+            }
+
+            int wallTX = -1, wallTY = -1;
+            int solidCount = onGround ? WallProfileFromGround(w, m, goLeft, by, &wallTX, &wallTY) : 0;
+            if (solidCount > 0) {
+                if (CanJumpOver(w, wallTX, wallTY, solidCount)) {
+                    if (onGround && m->vel.y == 0.0f && m->jumpCooldown <= 0.0f) {
+                        m->vel.y        = JUMP_FORCE * 0.85f;
+                        m->jumpCooldown = JUMP_COOLDOWN_TIME;
+                    }
+                } else if (distSq < (MONSTER_DIG_RANGE * MONSTER_DIG_RANGE)) {
+                    digging = true;
+                    if (wallTX != m->breakTX || wallTY != m->breakTY) {
+                        m->breakTX = wallTX; m->breakTY = wallTY; m->breakTimer = 0.0f;
+                    }
+                    if (m->breakCooldown <= 0.0f) {
+                        m->breakTimer += dt;
+                        if (m->breakTimer >= MonsterBreakTime(m)) {
+                            if (WorldInBounds(m->breakTX, m->breakTY) &&
+                                TileBreakable(w->tiles[m->breakTY][m->breakTX].type)) {
+                                w->tiles[m->breakTY][m->breakTX].type = TILE_AIR;
+                                int above = m->breakTY - 1;
+                                if (above >= 0 && TileBreakable(w->tiles[above][m->breakTX].type))
+                                    w->tiles[above][m->breakTX].type = TILE_AIR;
+                            }
+                            ParticlesSpawnDust(ps, (Vector2){ m->breakTX * TILE_SIZE + TILE_SIZE * 0.5f,
+                                                           m->breakTY * TILE_SIZE + TILE_SIZE * 0.5f }, 6);
+                            m->breakTimer    = 0.0f;
+                            m->breakCooldown = MONSTER_BREAK_COOLDOWN;
+                            m->breakTX = -1; m->breakTY = -1;
+                            m->retargetTimer = PATH_RETARGET;
                         }
-                        ParticlesSpawnDust(ps,
-                            (Vector2){ m->breakTX * TILE_SIZE + TILE_SIZE * 0.5f,
-                                       m->breakTY * TILE_SIZE + TILE_SIZE * 0.5f }, 6);
-                        m->breakTimer    = 0.0f;
-                        m->breakCooldown = MONSTER_BREAK_COOLDOWN;
-                        m->breakTX = -1; m->breakTY = -1;
-                        m->retargetTimer = PATH_RETARGET;
                     }
                 }
             }
+            if (onGround && distSq < (MONSTER_DIG_RANGE * MONSTER_DIG_RANGE))
+                TryDigDown(m, w, pCenter, dt);
+            if (!digging) { m->vel.x = moveX; m->facingLeft = goLeft; }
+            else            m->vel.x = 0;
+            m->vel.y += GRAVITY * dt;
+            if (m->vel.y > MAX_FALL_SPEED) m->vel.y = MAX_FALL_SPEED;
+            m->pos.x += m->vel.x * dt;
+            m->pos.y += m->vel.y * dt;
+            ResolveMonsterCollision(w, m);
+
+            Rectangle mr = MonsterRect(m);
+            Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
+            if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
+                int dmg = (int)(MonsterDamage(m) * defenceMult);
+                p->hp     -= dmg;
+                p->iframes = PLAYER_IFRAMES;
+                ParticlesSpawnBlood(ps, pCenter, 6);
+                if (p->hp < 0) p->hp = 0;
+            }
         }
-        if (onGround && dist < MONSTER_DIG_RANGE)
-            TryDigDown(m, w, pCenter, dt);
-        if (!digging) { m->vel.x = moveX; m->facingLeft = goLeft; }
-        else            m->vel.x = 0;
-        m->vel.y += GRAVITY * dt;
-        if (m->vel.y > MAX_FALL_SPEED) m->vel.y = MAX_FALL_SPEED;
-        m->pos.x += m->vel.x * dt;
-        m->pos.y += m->vel.y * dt;
-        ResolveMonsterCollision(w, m);
-        Rectangle mr = MonsterRect(m);
-        Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
-        if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
-            
-            
-            int dmg = (int)(MonsterDamage(m) * defenceMult);
-            p->hp     -= dmg;
-            p->iframes = PLAYER_IFRAMES;
-            ParticlesSpawnBlood(ps, pCenter, 6);
-            if (p->hp < 0) p->hp = 0;
-        }
+
         if (m->hp <= 0) {
             m->alive = false;
             p->kills++;
@@ -478,7 +472,6 @@ void MonstersDraw(const Monsters *ms) {
         if (!m->alive) continue;
         bool flash = (m->iframes > 0.0f) && ((int)(m->iframes * 10) % 2 == 0);
         int  mw = MonsterW(m), mh = MonsterH(m);
-
         if (m->kind == MONSTER_TYPE_ZOMBIE) {
             Rectangle src = { 0, 0, 32, 32 };
             if (m->facingLeft) src.width = -32;
@@ -516,18 +509,13 @@ void MonstersDraw(const Monsters *ms) {
             int eyeX = m->facingLeft ? (int)m->pos.x + 2 : (int)m->pos.x + mw - 5;
             DrawRectangle(eyeX, (int)m->pos.y + 3, 3, 3, eyes);
         }
-
         if (m->breakTX >= 0 && m->breakTimer > 0.0f) {
             float prog = m->breakTimer / MonsterBreakTime(m);
-            DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 10, mw + 4, 3,
-                          (Color){ 40, 40, 40, 200 });
-            DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 10,
-                          (int)((mw + 4) * prog), 3, (Color){ 255, 165, 0, 255 });
+            DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 10, mw + 4, 3, (Color){ 40, 40, 40, 200 });
+            DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 10, (int)((mw + 4) * prog), 3, (Color){ 255, 165, 0, 255 });
         }
         float hpFrac = (float)m->hp / m->maxHp;
-        DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 6, mw + 4, 3,
-                      (Color){ 60, 0, 0, 200 });
-        DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 6,
-                      (int)((mw + 4) * hpFrac), 3, (Color){ 220, 50, 50, 255 });
+        DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 6, mw + 4, 3, (Color){ 60, 0, 0, 200 });
+        DrawRectangle((int)m->pos.x - 2, (int)m->pos.y - 6, (int)((mw + 4) * hpFrac), 3, (Color){ 220, 50, 50, 255 });
     }
 }
