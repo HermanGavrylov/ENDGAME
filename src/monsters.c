@@ -64,12 +64,18 @@ static float MonsterBreakTime(const Monster *m) {
     return MONSTER_BREAK_TIME;
 }
 
+static int MonsterKindH(MonsterType kind) {
+    if (kind == MONSTER_TYPE_SPIDER) return SPIDER_H;
+    if (kind == MONSTER_TYPE_GIANT)  return GIANT_H;
+    return MONSTER_H;
+}
+
 void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const DayNight *dn) {
     if (dn->isDay) return;
     float nightT         = dn->elapsed - DAY_DURATION;
-    float spawnInterval  = 3.0f;
+    float spawnInterval  = 5.0f;
     int   spawnsExpected = (int)(nightT / spawnInterval);
-    if (ms->count >= spawnsExpected * 3 || ms->count >= MAX_MONSTERS) return; 
+    if (ms->count >= spawnsExpected * 3 || ms->count >= MAX_MONSTERS) return;
     float side   = (rand() % 2) ? 1.0f : -1.0f;
     float dist   = 280.0f + rand() % 220;
     float spawnX = p->pos.x + side * dist;
@@ -80,6 +86,7 @@ void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const Day
     MonsterType kind = (roll < 6) ? MONSTER_TYPE_ZOMBIE
                          : (roll < 9) ? MONSTER_TYPE_SPIDER
                                       : MONSTER_TYPE_GIANT;
+    int   mh     = MonsterKindH(kind);
     bool  cave   = (rand() % 3) == 0;
     float spawnY = p->pos.y;
     if (cave) {
@@ -90,7 +97,7 @@ void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const Day
             if (w->tiles[ty][tx].type == TILE_AIR &&
                 w->tiles[ty + 1][tx].type != TILE_AIR &&
                 !TileIsLiquid(w->tiles[ty + 1][tx].type)) {
-                spawnY = ty * TILE_SIZE - MonsterH(&(Monster){ .kind = kind });
+                spawnY = (float)(ty * TILE_SIZE - mh);
                 break;
             }
         }
@@ -99,7 +106,7 @@ void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const Day
             if (w->tiles[ty][tx].type == TILE_AIR &&
                 w->tiles[ty + 1][tx].type != TILE_AIR &&
                 !TileIsLiquid(w->tiles[ty + 1][tx].type)) {
-                spawnY = ty * TILE_SIZE - MonsterH(&(Monster){ .kind = kind });
+                spawnY = (float)(ty * TILE_SIZE - mh);
                 break;
             }
         }
@@ -160,11 +167,16 @@ static bool BFSWalkable(const World *w, int tx, int ty) {
 static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int gty) {
     int ox = ptx - BFS_W / 2;
     int oy = pty - BFS_H / 2;
+
+    /* усі великі буфери — static, не займають стек */
     static signed char prevX[BFS_H][BFS_W];
     static signed char prevY[BFS_H][BFS_W];
     static bool        visited[BFS_H][BFS_W];
+    static BFSNode     queue[BFS_MAX];
+    static BFSNode     raw[PATH_LEN * 2];
+
     memset(visited, 0, sizeof(visited));
-    BFSNode queue[BFS_MAX];
+
     int head = 0, tail = 0;
     int sx = ptx - ox, sy = pty - oy;
     int ex = gtx - ox, ey = gty - oy;
@@ -199,7 +211,6 @@ static void BuildPath(const World *w, Monster *m, int ptx, int pty, int gtx, int
         }
     }
     if (!found) { m->pathLen = 0; return; }
-    BFSNode raw[PATH_LEN * 2];
     int rawLen = 0, cx = ex, cy = ey;
     while ((cx != sx || cy != sy) && rawLen < PATH_LEN * 2) {
         raw[rawLen++] = (BFSNode){ (short)(cx + ox), (short)(cy + oy) };
@@ -332,13 +343,11 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             if (m->hp <= 0) {
                 m->alive = false;
                 p->kills++;
-                if (rand() % 100 < FOOD_DROP_CHANCE)
-                    InvAddItem(inv, TILE_MEAT);
-                if (rand() % 100 < LIFEPOT_DROP_MONSTER)
-                    InvAddItem(inv, TILE_LIFEPOT);
+                if (rand() % 100 < FOOD_DROP_CHANCE)   InvAddItem(inv, TILE_MEAT);
+                if (rand() % 100 < LIFEPOT_DROP_MONSTER) InvAddItem(inv, TILE_LIFEPOT);
             }
+            continue;
         }
-        
         Vector2 mCenter = { m->pos.x + MonsterW(m) * 0.5f,
                             m->pos.y + MonsterH(m) * 0.5f };
         float dx   = pCenter.x - mCenter.x;
@@ -453,10 +462,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         if (m->hp <= 0) {
             m->alive = false;
             p->kills++;
-            if (rand() % 100 < FOOD_DROP_CHANCE)
-                InvAddItem(inv, TILE_MEAT);
-            if (rand() % 100 < LIFEPOT_DROP_MONSTER)
-                InvAddItem(inv, TILE_LIFEPOT);
+            if (rand() % 100 < FOOD_DROP_CHANCE)    InvAddItem(inv, TILE_MEAT);
+            if (rand() % 100 < LIFEPOT_DROP_MONSTER) InvAddItem(inv, TILE_LIFEPOT);
         }
     }
     int alive = 0;
@@ -469,8 +476,8 @@ void MonstersDraw(const Monsters *ms) {
     for (int i = 0; i < ms->count; i++) {
         const Monster *m = &ms->list[i];
         if (!m->alive) continue;
-        bool  flash = (m->iframes > 0.0f) && ((int)(m->iframes * 10) % 2 == 0);
-        int   mw = MonsterW(m), mh = MonsterH(m);
+        bool flash = (m->iframes > 0.0f) && ((int)(m->iframes * 10) % 2 == 0);
+        int  mw = MonsterW(m), mh = MonsterH(m);
 
         if (m->kind == MONSTER_TYPE_ZOMBIE) {
             Rectangle src = { 0, 0, 32, 32 };

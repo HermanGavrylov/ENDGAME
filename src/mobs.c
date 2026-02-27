@@ -22,22 +22,40 @@ void MobsUnloadTextures(void) {
 }
 
 static bool TrySpawnMob(Mobs *mobs, const World *w, MobType kind) {
+
+    if (mobs->count >= MAX_MOBS)
+        return false;
+
     int tx = 10 + rand() % (WORLD_W - 20);
+
     for (int ty = 0; ty < WORLD_H - 1; ty++) {
+
         if (w->tiles[ty][tx].type == TILE_AIR &&
             w->tiles[ty + 1][tx].type == TILE_GRASS) {
-            Mob *mob       = &mobs->list[mobs->count++];
+
+            Mob *mob = &mobs->list[mobs->count];
+
             memset(mob, 0, sizeof(Mob));
+
+            mobs->count++; 
+
             mob->kind      = kind;
-            mob->hp        = mob->maxHp = (kind == MOB_PIG) ? PIG_HP : RABBIT_HP;
-            mob->pos       = (Vector2){ (float)(tx * TILE_SIZE),
-                                        (float)((ty - 1) * TILE_SIZE) };
-            mob->alive     = true;
+            mob->hp        = mob->maxHp =
+                (kind == MOB_PIG) ? PIG_HP : RABBIT_HP;
+
+            mob->pos = (Vector2){
+                (float)(tx * TILE_SIZE),
+                (float)((ty - 1) * TILE_SIZE)
+            };
+
+            mob->alive       = true;
             mob->wanderTimer = (float)(rand() % 3);
             mob->jumpTimer   = RABBIT_JUMP_INTERVAL;
+
             return true;
         }
     }
+
     return false;
 }
 

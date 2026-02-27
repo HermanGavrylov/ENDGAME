@@ -20,7 +20,7 @@ void PlayerInit(Player *p, const World *w, CharClass cls) {
     p->swordTimer = 0.0f;
     p->attacking  = false;
     p->kills      = 0;
-    p->temperature    = TEMP_MAX;  
+    p->temperature    = TEMP_MAX;
     p->freezeDmgTimer = TEMP_FREEZE_TICK;
 }
 

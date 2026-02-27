@@ -18,7 +18,7 @@
 #define WORLD_W          500
 #define WORLD_H          250
 
-#define SURFACE_LEVEL    60
+#define SURFACE_LEVEL    30
 #define SURFACE_RANGE    18
 #define DIRT_DEPTH       20
 
@@ -78,13 +78,13 @@
 #define RAIN_LEN         10
 #define RAIN_WIND        80.0f   
 
-#define DAY_DURATION     200.0f
-#define NIGHT_DURATION   200.0f
+#define DAY_DURATION     100.0f
+#define NIGHT_DURATION   150.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f
 
-#define MAX_MONSTERS           64
+#define MAX_MONSTERS           32
 #define MONSTER_IFRAMES        0.5f
 #define MONSTER_BREAK_TIME     2.2f
 #define MONSTER_DIG_RANGE      320.0f
@@ -117,7 +117,7 @@
 #define GIANT_SIGHT      180.0f
 #define GIANT_BREAK_TIME 1.2f
 
-#define MAX_PARTICLES    256
+#define MAX_PARTICLES    1024
 #define QUEST_COUNT      5
 
 #define HUNGER_MAX        100.0f
@@ -158,6 +158,9 @@
 
 #define PLAYER_NAME_LEN 32
 
+#define RAIN_DURATION   120.0f
+#define RAIN_FADE_TIME  3.0f
+
 #define LIFEPOT_HEAL       30        
 #define LIFEPOT_DROP_MONSTER 40      
 #define LIFEPOT_DROP_MOB     10   
@@ -165,9 +168,9 @@
 #define TEMP_MAX           37.0f     
 #define TEMP_MIN          -20.0f     
 #define TEMP_FREEZE_THRESHOLD 0.0f   
-#define TEMP_NIGHT_DRAIN   6.0f      
-#define TEMP_DAY_RESTORE   1.5f      
-#define TEMP_TORCH_RESTORE 12.0f     
+#define TEMP_NIGHT_DRAIN   0.8f      
+#define TEMP_DAY_RESTORE   1.2f      
+#define TEMP_TORCH_RESTORE 15.0f     
 #define TEMP_TORCH_DIST    (TORCH_RADIUS * 1.2f)
 #define TEMP_FREEZE_DMG    4.0f      
 #define TEMP_FREEZE_TICK   1.0f  
@@ -182,8 +185,6 @@ typedef struct {
     float x, y;
     float speed;
 } RainDrop;
-
-static RainDrop gRain[RAIN_COUNT];
 
 typedef struct {
     ScoreEntry entries[SCORE_MAX_ENTRIES];

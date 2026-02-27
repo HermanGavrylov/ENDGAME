@@ -6,16 +6,6 @@
 #define LINE_HOLD        2.2f
 #define SKIP_KEY         KEY_SPACE
 
-static const char *LINES[INTRO_LINES] = {
-    "Flight 247. Somewhere over the Atlantic.",
-    "For James Harlow, it was supposed to be\na routine trip home.",
-    "It wasn't.",
-    "The crash was swift. The silence that followed - absolute.",
-    "He is the only survivor.",
-    "The island is unknown. The night is coming.\nSomething stirs in the dark.",
-    "Survive until dawn.",
-};
-
 static const float LINE_SIZES[INTRO_LINES] = {
     18, 20, 28, 20, 24, 20, 30,
 };
@@ -76,9 +66,23 @@ static void DrawTypewriter(const char *text, int fontSize, Color col, float t) {
 }
 
 void IntroRun(void) {
-    Sound introSnd = LoadSound("resource/sound/typing.mp3");
+    char line1[128];
+    snprintf(line1, sizeof(line1),
+             "For %s, it was supposed to be\na routine trip home.", gPlayerName);
+
+    const char *LINES[INTRO_LINES] = {
+        "Flight 247. Somewhere over the Atlantic.",
+        line1,
+        "It wasn't.",
+        "The crash was swift. The silence that followed - absolute.",
+        "He is the only survivor.",
+        "The island is unknown. The night is coming.\nSomething stirs in the dark.",
+        "Survive until dawn.",
+    };
+
+    Sound introSnd   = LoadSound("resource/sound/typing.mp3");
     Sound ambientSnd = LoadSound("resource/sound/story_background.mp3");
-    
+
     SetSoundPitch(introSnd, 2.0f);
     SetSoundVolume(ambientSnd, 0.4f);
     PlaySound(ambientSnd);
@@ -104,9 +108,8 @@ void IntroRun(void) {
             soundStarted = true;
         }
 
-        if (t >= typeDur && IsSoundPlaying(introSnd)) {
+        if (t >= typeDur && IsSoundPlaying(introSnd))
             StopSound(introSnd);
-        }
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -121,8 +124,8 @@ void IntroRun(void) {
             finishedText = true;
             const char *hint = "Press SPACE to begin";
             int hw = MeasureText(hint, 16);
-            DrawText(hint, (SCREEN_W - hw) / 2, SCREEN_H * 3 / 4, 16, 
-                (Color){180,170,150, (unsigned char)(120 + 60 * sinf(GetTime() * 3))});
+            DrawText(hint, (SCREEN_W - hw) / 2, SCREEN_H * 3 / 4, 16,
+                (Color){180,170,150,(unsigned char)(120 + 60 * sinf(GetTime() * 3))});
         }
 
         DrawText("SPACE - skip", 12, SCREEN_H - 24, 12, (Color){100,100,100,160});
@@ -132,7 +135,7 @@ void IntroRun(void) {
             if (!finishedText) {
                 lineIdx++;
                 t = 0.0f;
-                soundStarted = false; 
+                soundStarted = false;
                 StopSound(introSnd);
                 if (lineIdx >= INTRO_LINES) lineIdx = INTRO_LINES - 1;
             } else {
@@ -151,6 +154,7 @@ void IntroRun(void) {
             if (lineIdx >= INTRO_LINES) lineIdx = INTRO_LINES - 1;
         }
     }
+
     UnloadSound(introSnd);
     UnloadSound(ambientSnd);
 }

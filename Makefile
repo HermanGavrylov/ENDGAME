@@ -8,8 +8,8 @@ SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES = $(addprefix $(OBJ_DIR)/, $(notdir $(SRC_FILES:.c=.o)))
 
 CC = clang
-CFLAGS = -std=c11 -Wall -Wextra -Werror -Wpedantic -I$(INC_DIR)
-
+CFLAGS = -std=c11 -fsanitize=address -g -Wall -Wextra -Werror -Wpedantic -I$(INC_DIR)
+LDFLAGS += -fsanitize=address
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Darwin)
