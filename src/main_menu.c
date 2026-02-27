@@ -296,6 +296,7 @@ void DrawGameOver(MenuSystemState *currentState, GameState *gs) {
         }
         DayNightInit(&gs->daynight);
         MonstersInit(&gs->monsters);
+        MobsInit(&gs->mobs, &gs->world);
         ParticlesInit(&gs->particles);
         QuestInit(&gs->quests);
         gs->camera.zoom = 2.5f;

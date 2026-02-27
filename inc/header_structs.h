@@ -78,8 +78,8 @@
 #define RAIN_LEN         10
 #define RAIN_WIND        80.0f   
 
-#define DAY_DURATION     150.0f
-#define NIGHT_DURATION   150.0f
+#define DAY_DURATION     200.0f
+#define NIGHT_DURATION   200.0f
 #define CYCLE_DURATION   (DAY_DURATION + NIGHT_DURATION)
 #define HOURS_IN_DAY     24
 #define TRANSITION_HOURS 1.5f

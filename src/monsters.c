@@ -63,9 +63,9 @@ static float MonsterBreakTime(const Monster *m) {
 void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const DayNight *dn) {
     if (dn->isDay) return;
     float nightT         = dn->elapsed - DAY_DURATION;
-    float spawnInterval  = 8.0f;
+    float spawnInterval  = 3.0f;   // частіше спавн (було 8.0)
     int   spawnsExpected = (int)(nightT / spawnInterval);
-    if (ms->count >= spawnsExpected * 2 || ms->count >= MAX_MONSTERS) return;
+    if (ms->count >= spawnsExpected * 3 || ms->count >= MAX_MONSTERS) return; 
     float side   = (rand() % 2) ? 1.0f : -1.0f;
     float dist   = 280.0f + rand() % 220;
     float spawnX = p->pos.x + side * dist;
@@ -427,6 +427,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             p->kills++;
             if (rand() % 100 < FOOD_DROP_CHANCE)
                 InvAddItem(inv, TILE_MEAT);
+            if (rand() % 100 < LIFEPOT_DROP_MONSTER)
+                InvAddItem(inv, TILE_LIFEPOT);
         }
     }
     int alive = 0;
