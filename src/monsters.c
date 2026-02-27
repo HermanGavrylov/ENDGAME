@@ -1,4 +1,8 @@
 #include "header.h"
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
 #define PATH_LEN            32
 #define BFS_MAX             4096
 #define BFS_W               80
@@ -63,7 +67,7 @@ static float MonsterBreakTime(const Monster *m) {
 void MonstersSpawnNight(Monsters *ms, const Player *p, const World *w, const DayNight *dn) {
     if (dn->isDay) return;
     float nightT         = dn->elapsed - DAY_DURATION;
-    float spawnInterval  = 3.0f;   // частіше спавн (було 8.0)
+    float spawnInterval  = 3.0f;
     int   spawnsExpected = (int)(nightT / spawnInterval);
     if (ms->count >= spawnsExpected * 3 || ms->count >= MAX_MONSTERS) return; 
     float side   = (rand() % 2) ? 1.0f : -1.0f;
@@ -293,6 +297,17 @@ static void UpdateSpider(Monster *m, const World *w, Vector2 pCenter, float dt) 
 
 void MonstersUpdate(Monsters *ms, Player *p, World *w,
                     Particles *ps, Inventory *inv, float defenceMult, float dt) {
+    
+    static Sound spiderAttackSnd;
+    static Sound zombieAttackSnd;
+    static bool soundsLoaded = false;
+    
+    if (!soundsLoaded) {
+        spiderAttackSnd = LoadSound("resource/sound/spider.mp3");
+        zombieAttackSnd = LoadSound("resource/sound/zombie.wav");
+        soundsLoaded = true;
+    }
+
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
     for (int i = 0; i < ms->count; i++) {
@@ -307,6 +322,7 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             Rectangle mr = MonsterRect(m);
             Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
             if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
+                
                 int dmg = (int)(MonsterDamage(m) * defenceMult);
                 p->hp     -= dmg;
                 p->iframes = PLAYER_IFRAMES;
@@ -321,12 +337,13 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
                 if (rand() % 100 < LIFEPOT_DROP_MONSTER)
                     InvAddItem(inv, TILE_LIFEPOT);
             }
-            continue;
         }
+        
         Vector2 mCenter = { m->pos.x + MonsterW(m) * 0.5f,
                             m->pos.y + MonsterH(m) * 0.5f };
         float dx   = pCenter.x - mCenter.x;
-        float dist = fabsf(dx) + fabsf(pCenter.y - mCenter.y);
+        float dy   = pCenter.y - mCenter.y;
+        float dist = fabsf(dx) + fabsf(dy);
         int mtx = (int)floorf(mCenter.x / TILE_SIZE);
         int mty = (int)floorf((m->pos.y + MonsterH(m) - 1.0f) / TILE_SIZE);
         int ptx = (int)floorf(pCenter.x / TILE_SIZE);
@@ -337,6 +354,15 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         int bx1 = (int)floorf((m->pos.x + MonsterW(m) - 1.0f) / TILE_SIZE);
         for (int tx = bx0; tx <= bx1; tx++)
             if (WorldIsSolid(w, tx, by)) { onGround = true; break; }
+        
+        if (dist < 350.0f) { 
+            if (m->kind == MONSTER_TYPE_SPIDER) {
+                if (!IsSoundPlaying(spiderAttackSnd)) PlaySound(spiderAttackSnd);
+            } else {
+                if (!IsSoundPlaying(zombieAttackSnd)) PlaySound(zombieAttackSnd);
+            }
+        }
+
         if (m->retargetTimer >= PATH_RETARGET) {
             m->retargetTimer = 0.0f;
             BuildPath(w, m, mtx, mty, ptx, pty);
@@ -416,6 +442,8 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         Rectangle mr = MonsterRect(m);
         Rectangle pr = { p->pos.x, p->pos.y, PLAYER_W, PLAYER_H };
         if (CheckCollisionRecs(mr, pr) && p->iframes <= 0.0f) {
+            
+            
             int dmg = (int)(MonsterDamage(m) * defenceMult);
             p->hp     -= dmg;
             p->iframes = PLAYER_IFRAMES;
