@@ -13,10 +13,20 @@
 static Texture2D idleTexture;
 static Texture2D giantTexture;
 
+static Sound spiderAttackSnd;
+static Sound zombieAttackSnd;
+static bool soundsLoaded = false;
+
 void MonstersInit(Monsters *ms) {
     memset(ms, 0, sizeof(Monsters));
     idleTexture  = LoadTexture("resource/Idle-Sheet.png");
     giantTexture = LoadTexture("resource/Sprite.png");
+    
+    if (!soundsLoaded) {
+        spiderAttackSnd = LoadSound("resource/sound/spider.mp3");
+        zombieAttackSnd = LoadSound("resource/sound/zombie.mp3");
+        soundsLoaded = true;
+    }
 }
 
 static void SpawnMonster(Monsters *ms, Vector2 pos, MonsterType kind) {
@@ -305,18 +315,14 @@ static void UpdateSpider(Monster *m, const World *w, Vector2 pCenter, float dt) 
 void MonstersUpdate(Monsters *ms, Player *p, World *w,
                     Particles *ps, Inventory *inv, float defenceMult, float dt) {
     
-    static Sound spiderAttackSnd;
-    static Sound zombieAttackSnd;
-    static bool soundsLoaded = false;
-    
-    if (!soundsLoaded) {
-        spiderAttackSnd = LoadSound("resource/sound/spider.mp3");
-        zombieAttackSnd = LoadSound("resource/sound/zombie.mp3");
-        soundsLoaded = true;
-    }
-
     Vector2 pCenter = { p->pos.x + PLAYER_W * 0.5f, p->pos.y + PLAYER_H * 0.5f };
     if (p->iframes > 0.0f) p->iframes -= dt;
+
+    bool spiderNearby = false;
+    bool zombieNearby = false;
+    float maxSpiderVol = 0.0f;
+    float maxZombieVol = 0.0f;
+    float soundThreshold = 400.0f;
 
     for (int i = 0; i < ms->count; i++) {
         Monster *m = &ms->list[i];
@@ -328,13 +334,18 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
         float dx = pCenter.x - mCenter.x;
         float dy = pCenter.y - mCenter.y;
         float distSq = dx*dx + dy*dy;
-        float soundThreshold = 200.0f;
 
         if (distSq < (soundThreshold * soundThreshold)) {
+            float dist = sqrtf(distSq);
+            float volume = 1.0f - (dist / soundThreshold);
+            if (volume < 0.1f) volume = 0.1f;
+            
             if (m->kind == MONSTER_TYPE_SPIDER) {
-                if (!IsSoundPlaying(spiderAttackSnd)) PlaySound(spiderAttackSnd);
+                spiderNearby = true;
+                if (volume > maxSpiderVol) maxSpiderVol = volume;
             } else {
-                if (!IsSoundPlaying(zombieAttackSnd)) PlaySound(zombieAttackSnd);
+                zombieNearby = true;
+                if (volume > maxZombieVol) maxZombieVol = volume;
             }
         }
 
@@ -460,6 +471,22 @@ void MonstersUpdate(Monsters *ms, Player *p, World *w,
             if (rand() % 100 < LIFEPOT_DROP_MONSTER) InvAddItem(inv, TILE_LIFEPOT);
         }
     }
+
+    // TRIGGER SOUNDS OUTSIDE THE LOOP
+    if (spiderNearby) {
+        SetSoundVolume(spiderAttackSnd, maxSpiderVol);
+        if (!IsSoundPlaying(spiderAttackSnd)) PlaySound(spiderAttackSnd);
+    } else {
+        if (IsSoundPlaying(spiderAttackSnd)) StopSound(spiderAttackSnd);
+    }
+
+    if (zombieNearby) {
+        SetSoundVolume(zombieAttackSnd, maxZombieVol);
+        if (!IsSoundPlaying(zombieAttackSnd)) PlaySound(zombieAttackSnd);
+    } else {
+        if (IsSoundPlaying(zombieAttackSnd)) StopSound(zombieAttackSnd);
+    }
+
     int alive = 0;
     for (int i = 0; i < ms->count; i++)
         if (ms->list[i].alive) ms->list[alive++] = ms->list[i];

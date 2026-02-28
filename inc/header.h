@@ -86,4 +86,5 @@ void  ScoreboardDraw(Scoreboard *sb, int *currentState, int prevState);
 void  IntroRun(void);
 void  OutroRun(void);
 void  CameraUpdate(Camera2D *cam, const Player *p);
+void RainUnload(void);
 #endif

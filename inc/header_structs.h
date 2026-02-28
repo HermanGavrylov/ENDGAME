@@ -392,7 +392,8 @@ typedef enum {
     STATE_SCOREBOARD,
     STATE_GAMEOVER,
     STATE_GAMEPLAY,
-    STATE_EXIT
+    STATE_EXIT,
+    STATE_PAUSE
 } MenuSystemState;
 
 typedef struct {

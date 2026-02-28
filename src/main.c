@@ -31,20 +31,24 @@ static void ResetGame(GameState *gs) {
     gs->camera.target   = gs->player.pos;
     gs->camera.rotation = 0.0f;
     gs->camera.zoom     = 2.5f;
+    
+    RainUnload();
+    RainInit();
 }
 
 int main(void) {
-
     InitWindow(SCREEN_W, SCREEN_H, "The Dark");
     InitAudioDevice(); 
     SetTargetFPS(TARGET_FPS);
     SetExitKey(KEY_NULL);
 
-    Music bgMusic = LoadMusicStream("resource/sound/gameplay_background.mp3");
-    bgMusic.looping = true;
+    Music menuMusic = LoadMusicStream("resource/sound/menu_background.mp3");
+    Music gameMusic = LoadMusicStream("resource/sound/gameplay_background.mp3");
+    menuMusic.looping = true;
+    gameMusic.looping = true;
 
     MenuSystemState currentState  = STATE_MENU;
-    MenuSystemState previousState = STATE_MENU;
+    MenuSystemState previousState = STATE_MENU; 
     bool isPaused  = false;
     bool needOutro = false;
     GameSettings settings = LoadSettings();
@@ -61,27 +65,22 @@ int main(void) {
 
     GameState gs = {0};
     gs.selectedChar = CHAR_WARRIOR;
-    WorldGenerate(&gs.world);
-    PlayerInit(&gs.player, &gs.world, gs.selectedChar);
-    InputInit(&gs.input);
-    InvInit(&gs.inv);
-    DayNightInit(&gs.daynight);
-    MonstersInit(&gs.monsters);
-    MobsInit(&gs.mobs, &gs.world);
-    ParticlesInit(&gs.particles);
-    QuestInit(&gs.quests);
     gs.camera.offset   = (Vector2){ SCREEN_W * 0.5f, SCREEN_H * 0.5f };
-    gs.camera.target   = gs.player.pos;
-    gs.camera.rotation = 0.0f;
     gs.camera.zoom     = 2.5f;
 
     while (!WindowShouldClose() && currentState != STATE_EXIT) {
-
-        if (currentState == STATE_GAMEPLAY || currentState == STATE_SETTINGS) {
-            if (!IsMusicStreamPlaying(bgMusic)) PlayMusicStream(bgMusic);
-            UpdateMusicStream(bgMusic);
-        } else {
-            if (IsMusicStreamPlaying(bgMusic)) PauseMusicStream(bgMusic);
+        
+        if (currentState == STATE_MENU || currentState == STATE_CHARSELECT) {
+            if (IsMusicStreamPlaying(gameMusic)) StopMusicStream(gameMusic);
+            if (!IsMusicStreamPlaying(menuMusic)) PlayMusicStream(menuMusic);
+            UpdateMusicStream(menuMusic);
+        } else if (currentState == STATE_GAMEPLAY || currentState == STATE_GAMEOVER) {
+            if (IsMusicStreamPlaying(menuMusic)) StopMusicStream(menuMusic);
+            if (!IsMusicStreamPlaying(gameMusic)) PlayMusicStream(gameMusic);
+            UpdateMusicStream(gameMusic);
+        } else if (currentState == STATE_SETTINGS) {
+            if (previousState == STATE_MENU) UpdateMusicStream(menuMusic);
+            else UpdateMusicStream(gameMusic);
         }
 
         BeginDrawing();
@@ -129,7 +128,9 @@ int main(void) {
                                    &gs.inv, cd.defenceMult, dt);
                     MobsSpawnDay(&gs.mobs, &gs.world, &gs.daynight, dt);
                     MobsUpdate(&gs.mobs, &gs.player, &gs.world, &gs.particles, &gs.inv, dt);
-                    MobsAttack(&gs.mobs, &gs.player, &gs.particles, &gs.inv, cd.damageMult);
+                    
+                    MobsAttack(&gs.mobs, &gs.player, &gs.particles, &gs.inv, cd.damageMult); 
+                    
                     InputUpdate(&gs.input, &gs.world, &gs.player, &gs.camera, &gs.inv, dt);
                     PlayerUpdate(&gs.player, &gs.world, dt, cd.speedMult);
                     PlayerAttack(&gs.player, &gs.monsters, &gs.particles, &gs.inv,
@@ -173,27 +174,11 @@ int main(void) {
                 if (isPaused) {
                     DrawPauseMenu(&isPaused, &currentState);
                     if (currentState == STATE_SETTINGS)
-                        previousState = STATE_GAMEPLAY;
+                        previousState = STATE_PAUSE;
                 }
                 break;
 
             case STATE_GAMEOVER:
-                ClearBackground(DayNightSkyColor(&gs.daynight));
-                DrawTexturePro(
-                    bgTexture,
-                    (Rectangle){ 0, 0, bgTexture.width, bgTexture.height },
-                    (Rectangle){ 0, 0, SCREEN_W, SCREEN_H },
-                    (Vector2){ 0, 0 }, 0.0f, WHITE
-                );
-                BeginMode2D(gs.camera);
-                    WorldDraw(&gs.world, &gs.camera);
-                    ParticlesDraw(&gs.particles);
-                    MonstersDraw(&gs.monsters);
-                    MobsDraw(&gs.mobs);
-                    PlayerDraw(&gs.player, &gs.inv, cd.tint, gs.selectedChar);
-                EndMode2D();
-                RainDraw();
-                LightingDraw(&gs.world, &gs.camera, &gs.player, &gs.inv, &gs.daynight);
                 DrawGameOver(&currentState, &gs);
                 break;
 
@@ -214,9 +199,11 @@ int main(void) {
         }
     }
 
-    UnloadMusicStream(bgMusic);
+    UnloadMusicStream(menuMusic);
+    UnloadMusicStream(gameMusic);
     UnloadTexture(bgTexture);
     MobsUnloadTextures();
+    RainUnload();
     TexturesUnload();
     CloseAudioDevice();
     CloseWindow();

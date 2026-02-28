@@ -1,9 +1,13 @@
 #include "header.h"
+#include <stdlib.h>
 
 static RainDrop gRain[RAIN_COUNT];
 static float    gRainTimer  = 0.0f;
 static float    gRainAlpha  = 0.0f;
 static bool     gRainDone   = false;
+
+static Sound    sRainSound;
+static bool     gRainSoundLoaded = false;
 
 void RainInit(void) {
     for (int i = 0; i < RAIN_COUNT; i++) {
@@ -15,6 +19,20 @@ void RainInit(void) {
     gRainTimer = 0.0f;
     gRainAlpha = 0.0f;
     gRainDone  = false;
+
+    if (FileExists("resource/sound/rain.wav")) {
+        if (!gRainSoundLoaded) {
+            sRainSound = LoadSound("resource/sound/rain.wav");
+            gRainSoundLoaded = true;
+        }
+    }
+}
+
+void RainUnload(void) {
+    if (gRainSoundLoaded) {
+        UnloadSound(sRainSound);
+        gRainSoundLoaded = false;
+    }
 }
 
 void RainUpdate(float dt) {
@@ -31,7 +49,18 @@ void RainUpdate(float dt) {
     else {
         gRainAlpha = 0.0f;
         gRainDone  = true;
+        
+        if (gRainSoundLoaded && IsSoundPlaying(sRainSound)) {
+            StopSound(sRainSound);
+        }
         return;
+    }
+
+    if (gRainAlpha > 0.0f && gRainSoundLoaded) {
+        if (!IsSoundPlaying(sRainSound)) {
+            PlaySound(sRainSound);
+        }
+        SetSoundVolume(sRainSound, gRainAlpha); 
     }
 
     for (int i = 0; i < RAIN_COUNT; i++) {
